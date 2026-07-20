@@ -522,6 +522,181 @@ const SILVER_STARTER_LINES = {
   ],
 };
 
+// ---- Gen 3 (Hoenn) ----
+// Ace levels follow the Johto curve (10/23/35/45/59/69/79/84) so difficulty
+// and per-map level caps behave exactly like a Gen 2 run. Teams are padded to
+// 6 by buildBossTeam with type- and level-appropriate filler.
+const HOENN_GYM_LEADERS = [
+  { name: 'Roxanne', badge: 'Stone Badge', type: 'Rock', moveTier: 0,
+    team: [
+      { speciesId: 74,  name: 'Geodude',  types: ['Rock','Ground'], baseStats: { hp:40,  atk:80,  def:100, speed:20,  special:30,  spdef:30  }, level: 8 },
+      { speciesId: 299, name: 'Nosepass', types: ['Rock'],          baseStats: { hp:30,  atk:45,  def:135, speed:30,  special:45,  spdef:90  }, level: 10 },
+    ]
+  },
+  { name: 'Brawly', badge: 'Knuckle Badge', type: 'Fighting', moveTier: 0,
+    team: [
+      { speciesId: 66,  name: 'Machop',   types: ['Fighting'], baseStats: { hp:70,  atk:80,  def:50,  speed:35,  special:35,  spdef:35  }, level: 21 },
+      { speciesId: 296, name: 'Makuhita', types: ['Fighting'], baseStats: { hp:72,  atk:60,  def:30,  speed:25,  special:20,  spdef:30  }, level: 23 },
+    ]
+  },
+  { name: 'Wattson', badge: 'Dynamo Badge', type: 'Electric', moveTier: 0,
+    team: [
+      { speciesId: 100, name: 'Voltorb',   types: ['Electric'],         baseStats: { hp:40,  atk:30,  def:50,  speed:100, special:55,  spdef:55  }, level: 32 },
+      { speciesId: 309, name: 'Electrike', types: ['Electric'],         baseStats: { hp:40,  atk:45,  def:40,  speed:65,  special:65,  spdef:40  }, level: 33 },
+      { speciesId: 82,  name: 'Magneton',  types: ['Electric','Steel'], baseStats: { hp:50,  atk:60,  def:95,  speed:70,  special:120, spdef:70  }, level: 35 },
+    ]
+  },
+  { name: 'Flannery', badge: 'Heat Badge', type: 'Fire', moveTier: 1,
+    team: [
+      { speciesId: 322, name: 'Numel',    types: ['Fire','Ground'], baseStats: { hp:60,  atk:60,  def:40,  speed:35,  special:65,  spdef:45  }, level: 42 },
+      { speciesId: 218, name: 'Slugma',   types: ['Fire'],          baseStats: { hp:40,  atk:40,  def:40,  speed:20,  special:70,  spdef:40  }, level: 43 },
+      { speciesId: 323, name: 'Camerupt', types: ['Fire','Ground'], baseStats: { hp:70,  atk:100, def:70,  speed:40,  special:105, spdef:75  }, level: 43 },
+      { speciesId: 324, name: 'Torkoal',  types: ['Fire'],          baseStats: { hp:70,  atk:85,  def:140, speed:20,  special:85,  spdef:70  }, level: 45 },
+    ]
+  },
+  { name: 'Norman', badge: 'Balance Badge', type: 'Normal', moveTier: 1,
+    team: [
+      { speciesId: 327, name: 'Spinda',   types: ['Normal'], baseStats: { hp:60,  atk:60,  def:60,  speed:60,  special:60,  spdef:60  }, level: 56 },
+      { speciesId: 264, name: 'Linoone',  types: ['Normal'], baseStats: { hp:78,  atk:70,  def:61,  speed:100, special:50,  spdef:61  }, level: 56 },
+      { speciesId: 288, name: 'Vigoroth', types: ['Normal'], baseStats: { hp:80,  atk:80,  def:80,  speed:90,  special:55,  spdef:55  }, level: 57 },
+      { speciesId: 289, name: 'Slaking',  types: ['Normal'], baseStats: { hp:150, atk:160, def:100, speed:100, special:95,  spdef:65  }, level: 59 },
+    ]
+  },
+  { name: 'Winona', badge: 'Feather Badge', type: 'Flying', moveTier: 1,
+    team: [
+      { speciesId: 333, name: 'Swablu',   types: ['Normal','Flying'], baseStats: { hp:45,  atk:40,  def:60,  speed:50,  special:40,  spdef:75  }, level: 66 },
+      { speciesId: 357, name: 'Tropius',  types: ['Grass','Flying'],  baseStats: { hp:99,  atk:68,  def:83,  speed:51,  special:72,  spdef:87  }, level: 66 },
+      { speciesId: 279, name: 'Pelipper', types: ['Water','Flying'],  baseStats: { hp:60,  atk:50,  def:100, speed:65,  special:95,  spdef:70  }, level: 67 },
+      { speciesId: 227, name: 'Skarmory', types: ['Steel','Flying'],  baseStats: { hp:65,  atk:80,  def:140, speed:70,  special:40,  spdef:70  }, level: 67 },
+      { speciesId: 334, name: 'Altaria',  types: ['Dragon','Flying'], baseStats: { hp:75,  atk:70,  def:90,  speed:80,  special:70,  spdef:105 }, level: 69 },
+    ]
+  },
+  { name: 'Tate & Liza', badge: 'Mind Badge', type: 'Psychic', moveTier: 2,
+    team: [
+      { speciesId: 178, name: 'Xatu',     types: ['Psychic','Flying'], baseStats: { hp:65,  atk:75,  def:70,  speed:95,  special:95,  spdef:70  }, level: 76 },
+      { speciesId: 337, name: 'Lunatone', types: ['Rock','Psychic'],   baseStats: { hp:90,  atk:55,  def:65,  speed:70,  special:95,  spdef:85  }, level: 77 },
+      { speciesId: 338, name: 'Solrock',  types: ['Rock','Psychic'],   baseStats: { hp:90,  atk:95,  def:85,  speed:70,  special:55,  spdef:65  }, level: 77 },
+      { speciesId: 344, name: 'Claydol',  types: ['Ground','Psychic'], baseStats: { hp:60,  atk:70,  def:105, speed:75,  special:70,  spdef:120 }, level: 79 },
+    ]
+  },
+  { name: 'Wallace', badge: 'Rain Badge', type: 'Water', moveTier: 2,
+    team: [
+      { speciesId: 370, name: 'Luvdisc',  types: ['Water'],          baseStats: { hp:43,  atk:30,  def:55,  speed:97,  special:40,  spdef:65  }, level: 81 },
+      { speciesId: 340, name: 'Whiscash', types: ['Water','Ground'], baseStats: { hp:110, atk:78,  def:73,  speed:60,  special:76,  spdef:71  }, level: 82 },
+      { speciesId: 364, name: 'Sealeo',   types: ['Ice','Water'],    baseStats: { hp:90,  atk:60,  def:70,  speed:45,  special:75,  spdef:70  }, level: 82 },
+      { speciesId: 119, name: 'Seaking',  types: ['Water'],          baseStats: { hp:80,  atk:92,  def:65,  speed:68,  special:65,  spdef:80  }, level: 82 },
+      { speciesId: 350, name: 'Milotic',  types: ['Water'],          baseStats: { hp:95,  atk:60,  def:79,  speed:81,  special:100, spdef:125 }, level: 84 },
+    ]
+  },
+];
+
+// Hoenn Elite Four + Champion Steven. Level curve mirrors GEN2_ELITE_4 (76–90).
+const GEN3_ELITE_4 = [
+  { name: 'Sidney', title: 'Elite Four', type: 'Dark',
+    team: [
+      { speciesId: 262, name: 'Mightyena', types: ['Dark'],          baseStats: { hp:70,  atk:90,  def:70,  speed:70,  special:60,  spdef:60  }, level: 76 },
+      { speciesId: 275, name: 'Shiftry',   types: ['Grass','Dark'],  baseStats: { hp:90,  atk:100, def:60,  speed:80,  special:90,  spdef:60  }, level: 76 },
+      { speciesId: 332, name: 'Cacturne',  types: ['Grass','Dark'],  baseStats: { hp:70,  atk:115, def:60,  speed:55,  special:115, spdef:60  }, level: 78 },
+      { speciesId: 319, name: 'Sharpedo',  types: ['Water','Dark'],  baseStats: { hp:70,  atk:120, def:40,  speed:95,  special:95,  spdef:40  }, level: 78 },
+      { speciesId: 359, name: 'Absol',     types: ['Dark'],          baseStats: { hp:65,  atk:130, def:60,  speed:75,  special:75,  spdef:60  }, level: 80 },
+    ]
+  },
+  { name: 'Phoebe', title: 'Elite Four', type: 'Ghost',
+    team: [
+      { speciesId: 302, name: 'Sableye',  types: ['Dark','Ghost'], baseStats: { hp:50,  atk:75,  def:75,  speed:50,  special:65,  spdef:65  }, level: 80 },
+      { speciesId: 354, name: 'Banette',  types: ['Ghost'],        baseStats: { hp:64,  atk:115, def:65,  speed:65,  special:83,  spdef:63  }, level: 80 },
+      { speciesId: 354, name: 'Banette',  types: ['Ghost'],        baseStats: { hp:64,  atk:115, def:65,  speed:65,  special:83,  spdef:63  }, level: 80 },
+      { speciesId: 356, name: 'Dusclops', types: ['Ghost'],        baseStats: { hp:40,  atk:70,  def:130, speed:25,  special:60,  spdef:130 }, level: 80 },
+      { speciesId: 356, name: 'Dusclops', types: ['Ghost'],        baseStats: { hp:40,  atk:70,  def:130, speed:25,  special:60,  spdef:130 }, level: 84 },
+    ]
+  },
+  { name: 'Glacia', title: 'Elite Four', type: 'Ice',
+    team: [
+      { speciesId: 362, name: 'Glalie',  types: ['Ice'],         baseStats: { hp:80,  atk:80,  def:80,  speed:80,  special:80,  spdef:80  }, level: 86 },
+      { speciesId: 362, name: 'Glalie',  types: ['Ice'],         baseStats: { hp:80,  atk:80,  def:80,  speed:80,  special:80,  spdef:80  }, level: 86 },
+      { speciesId: 364, name: 'Sealeo',  types: ['Ice','Water'], baseStats: { hp:90,  atk:60,  def:70,  speed:45,  special:75,  spdef:70  }, level: 86 },
+      { speciesId: 364, name: 'Sealeo',  types: ['Ice','Water'], baseStats: { hp:90,  atk:60,  def:70,  speed:45,  special:75,  spdef:70  }, level: 86 },
+      { speciesId: 365, name: 'Walrein', types: ['Ice','Water'], baseStats: { hp:110, atk:80,  def:90,  speed:65,  special:95,  spdef:90  }, level: 86 },
+    ]
+  },
+  { name: 'Drake', title: 'Elite Four', type: 'Dragon',
+    team: [
+      { speciesId: 372, name: 'Shelgon',   types: ['Dragon'],          baseStats: { hp:65,  atk:95,  def:100, speed:50,  special:60,  spdef:50  }, level: 84 },
+      { speciesId: 334, name: 'Altaria',   types: ['Dragon','Flying'], baseStats: { hp:75,  atk:70,  def:90,  speed:80,  special:70,  spdef:105 }, level: 84 },
+      { speciesId: 330, name: 'Flygon',    types: ['Ground','Dragon'], baseStats: { hp:80,  atk:100, def:80,  speed:100, special:80,  spdef:80  }, level: 86 },
+      { speciesId: 330, name: 'Flygon',    types: ['Ground','Dragon'], baseStats: { hp:80,  atk:100, def:80,  speed:100, special:80,  spdef:80  }, level: 86 },
+      { speciesId: 373, name: 'Salamence', types: ['Dragon','Flying'], baseStats: { hp:95,  atk:135, def:80,  speed:100, special:110, spdef:80  }, level: 88 },
+    ]
+  },
+  { name: 'Steven', title: 'Champion', type: 'Mixed',
+    team: [
+      { speciesId: 227, name: 'Skarmory',  types: ['Steel','Flying'],  baseStats: { hp:65,  atk:80,  def:140, speed:70,  special:40,  spdef:70  }, level: 86 },
+      { speciesId: 344, name: 'Claydol',   types: ['Ground','Psychic'],baseStats: { hp:60,  atk:70,  def:105, speed:75,  special:70,  spdef:120 }, level: 86 },
+      { speciesId: 346, name: 'Cradily',   types: ['Rock','Grass'],    baseStats: { hp:86,  atk:81,  def:97,  speed:43,  special:81,  spdef:107 }, level: 87 },
+      { speciesId: 348, name: 'Armaldo',   types: ['Rock','Bug'],      baseStats: { hp:75,  atk:125, def:100, speed:45,  special:70,  spdef:80  }, level: 87 },
+      { speciesId: 306, name: 'Aggron',    types: ['Steel','Rock'],    baseStats: { hp:70,  atk:110, def:180, speed:50,  special:60,  spdef:60  }, level: 88 },
+      { speciesId: 376, name: 'Metagross', types: ['Steel','Psychic'], baseStats: { hp:80,  atk:135, def:130, speed:70,  special:95,  spdef:90  }, level: 90 },
+    ]
+  },
+];
+
+// Villain-team encounters at the rival node slots (maps 1/3/5/7), escalating
+// grunt → admin → admin → Archie/Maxie. Which team ambushes a run is rolled
+// once in startNewRun (state.villainTeam). Same shape as SILVER_ENCOUNTERS
+// plus a `leader` label for node/battle titles; ace levels mirror Silver's.
+const AQUA_MAGMA_ENCOUNTERS = {
+  aqua: [
+    { leader: 'Aqua Grunt', team: [
+      { speciesId: 261, name: 'Poochyena', types: ['Dark'],            baseStats: { hp:35, atk:55,  def:35, speed:35,  special:30,  spdef:30 }, level: 15 },
+      { speciesId: 41,  name: 'Zubat',     types: ['Poison','Flying'], baseStats: { hp:40, atk:45,  def:35, speed:55,  special:30,  spdef:40 }, level: 16 },
+      { speciesId: 318, name: 'Carvanha',  types: ['Water','Dark'],    baseStats: { hp:45, atk:90,  def:20, speed:65,  special:65,  spdef:20 }, level: 18 },
+    ]},
+    { leader: 'Aqua Admin', team: [
+      { speciesId: 262, name: 'Mightyena', types: ['Dark'],            baseStats: { hp:70, atk:90,  def:70, speed:70,  special:60,  spdef:60 }, level: 35 },
+      { speciesId: 42,  name: 'Golbat',    types: ['Poison','Flying'], baseStats: { hp:75, atk:80,  def:70, speed:90,  special:65,  spdef:75 }, level: 35 },
+      { speciesId: 318, name: 'Carvanha',  types: ['Water','Dark'],    baseStats: { hp:45, atk:90,  def:20, speed:65,  special:65,  spdef:20 }, level: 36 },
+      { speciesId: 319, name: 'Sharpedo',  types: ['Water','Dark'],    baseStats: { hp:70, atk:120, def:40, speed:95,  special:95,  spdef:40 }, level: 38 },
+    ]},
+    { leader: 'Aqua Admin', team: [
+      { speciesId: 262, name: 'Mightyena', types: ['Dark'],            baseStats: { hp:70, atk:90,  def:70, speed:70,  special:60,  spdef:60 }, level: 54 },
+      { speciesId: 169, name: 'Crobat',    types: ['Poison','Flying'], baseStats: { hp:85, atk:90,  def:80, speed:130, special:70,  spdef:80 }, level: 56 },
+      { speciesId: 364, name: 'Sealeo',    types: ['Ice','Water'],     baseStats: { hp:90, atk:60,  def:70, speed:45,  special:75,  spdef:70 }, level: 55 },
+      { speciesId: 319, name: 'Sharpedo',  types: ['Water','Dark'],    baseStats: { hp:70, atk:120, def:40, speed:95,  special:95,  spdef:40 }, level: 58 },
+    ]},
+    { leader: 'Archie', team: [
+      { speciesId: 262, name: 'Mightyena', types: ['Dark'],            baseStats: { hp:70,  atk:90,  def:70, speed:70,  special:60,  spdef:60 }, level: 75 },
+      { speciesId: 169, name: 'Crobat',    types: ['Poison','Flying'], baseStats: { hp:85,  atk:90,  def:80, speed:130, special:70,  spdef:80 }, level: 76 },
+      { speciesId: 365, name: 'Walrein',   types: ['Ice','Water'],     baseStats: { hp:110, atk:80,  def:90, speed:65,  special:95,  spdef:90 }, level: 74 },
+      { speciesId: 319, name: 'Sharpedo',  types: ['Water','Dark'],    baseStats: { hp:70,  atk:120, def:40, speed:95,  special:95,  spdef:40 }, level: 78 },
+    ]},
+  ],
+  magma: [
+    { leader: 'Magma Grunt', team: [
+      { speciesId: 261, name: 'Poochyena', types: ['Dark'],            baseStats: { hp:35, atk:55, def:35, speed:35, special:30, spdef:30 }, level: 15 },
+      { speciesId: 41,  name: 'Zubat',     types: ['Poison','Flying'], baseStats: { hp:40, atk:45, def:35, speed:55, special:30, spdef:40 }, level: 16 },
+      { speciesId: 322, name: 'Numel',     types: ['Fire','Ground'],   baseStats: { hp:60, atk:60, def:40, speed:35, special:65, spdef:45 }, level: 18 },
+    ]},
+    { leader: 'Magma Admin', team: [
+      { speciesId: 262, name: 'Mightyena', types: ['Dark'],            baseStats: { hp:70, atk:90,  def:70, speed:70, special:60,  spdef:60 }, level: 35 },
+      { speciesId: 42,  name: 'Golbat',    types: ['Poison','Flying'], baseStats: { hp:75, atk:80,  def:70, speed:90, special:65,  spdef:75 }, level: 35 },
+      { speciesId: 322, name: 'Numel',     types: ['Fire','Ground'],   baseStats: { hp:60, atk:60,  def:40, speed:35, special:65,  spdef:45 }, level: 36 },
+      { speciesId: 323, name: 'Camerupt',  types: ['Fire','Ground'],   baseStats: { hp:70, atk:100, def:70, speed:40, special:105, spdef:75 }, level: 38 },
+    ]},
+    { leader: 'Magma Admin', team: [
+      { speciesId: 262, name: 'Mightyena', types: ['Dark'],            baseStats: { hp:70, atk:90,  def:70,  speed:70,  special:60,  spdef:60 }, level: 54 },
+      { speciesId: 169, name: 'Crobat',    types: ['Poison','Flying'], baseStats: { hp:85, atk:90,  def:80,  speed:130, special:70,  spdef:80 }, level: 56 },
+      { speciesId: 324, name: 'Torkoal',   types: ['Fire'],            baseStats: { hp:70, atk:85,  def:140, speed:20,  special:85,  spdef:70 }, level: 55 },
+      { speciesId: 323, name: 'Camerupt',  types: ['Fire','Ground'],   baseStats: { hp:70, atk:100, def:70,  speed:40,  special:105, spdef:75 }, level: 58 },
+    ]},
+    { leader: 'Maxie', team: [
+      { speciesId: 262, name: 'Mightyena', types: ['Dark'],            baseStats: { hp:70, atk:90,  def:70,  speed:70,  special:60,  spdef:60 }, level: 75 },
+      { speciesId: 169, name: 'Crobat',    types: ['Poison','Flying'], baseStats: { hp:85, atk:90,  def:80,  speed:130, special:70,  spdef:80 }, level: 76 },
+      { speciesId: 324, name: 'Torkoal',   types: ['Fire'],            baseStats: { hp:70, atk:85,  def:140, speed:20,  special:85,  spdef:70 }, level: 74 },
+      { speciesId: 323, name: 'Camerupt',  types: ['Fire','Ground'],   baseStats: { hp:70, atk:100, def:70,  speed:40,  special:105, spdef:75 }, level: 78 },
+    ]},
+  ],
+};
+
 // Item pool
 const ITEM_POOL = [
   { id: 'lucky_egg',          name: 'Lucky Egg',          desc: '30% chance: holder gains +1 extra level after each battle',        icon: '🥚', minMap: 4 },
@@ -657,6 +832,34 @@ const GEN2_MAP_LEVEL_RANGES = [
   [81,  90],  // Map 8 — Elite Four (Will/Koga/Bruno/Karen/Lance) — final
 ];
 
+// Gen 3 uses the same clean 10-levels-per-map ladder as Gen 2 (and reuses
+// GEN2_LAYER_OFFSETS for node levels).
+const GEN3_MAP_LEVEL_RANGES = [
+  [1,   10],  // Map 0 — Roxanne
+  [11,  20],  // Map 1 — Brawly
+  [21,  30],  // Map 2 — Wattson
+  [31,  40],  // Map 3 — Flannery
+  [41,  50],  // Map 4 — Norman
+  [51,  60],  // Map 5 — Winona
+  [61,  70],  // Map 6 — Tate & Liza
+  [71,  80],  // Map 7 — Wallace
+  [81,  90],  // Map 8 — Elite Four (Sidney/Phoebe/Glacia/Drake/Steven) — final
+];
+
+// Gen 3 BST bands: the first 9 rows of the Gen 2 ladder (Hoenn is a single
+// 9-map region, so there is no Kanto postgame tail).
+const GEN3_MAP_BST_RANGES = [
+  { min: 200, max: 310 }, // 0 Roxanne
+  { min: 250, max: 360 }, // 1 Brawly
+  { min: 290, max: 400 }, // 2 Wattson
+  { min: 320, max: 430 }, // 3 Flannery
+  { min: 350, max: 460 }, // 4 Norman
+  { min: 380, max: 490 }, // 5 Winona
+  { min: 410, max: 510 }, // 6 Tate & Liza
+  { min: 440, max: 530 }, // 7 Wallace
+  { min: 460, max: 999 }, // 8 Elite Four
+];
+
 // Gen 2 deterministic level offsets for layers 1..7 (boss layer 8 uses leader data).
 // Curve sits cleanly in mapMin..mapMin+9 with the gym at exactly mapMin+9.
 // Map 1 example: layers = 1,2,3,5,6,8,9 ; gym = 10. Map 2: 11,12,13,15,16,18,19 ; gym = 20.
@@ -665,6 +868,11 @@ const GEN2_LAYER_OFFSETS = [0, 1, 2, 4, 5, 7, 8];
 const MAP_NAMES = [
   'Route 1', 'Mt Moon', 'Nugget Bridge', 'Rock Tunnel',
   'Silph Co', 'Safari Zone', 'Seafoam Island', 'Viridian City', 'Victory Road',
+];
+
+const MAP_NAMES_HOENN = [
+  'Route 101', 'Granite Cave', 'Mauville City', 'Mt. Chimney',
+  'Petalburg City', 'Route 119', 'Mt. Pyre', 'Sootopolis City', 'Ever Grande City',
 ];
 
 function getPokemonLocations(speciesId, bst) {
@@ -1104,7 +1312,7 @@ async function getCatchChoices(mapIndex, count = 3, maxGenId = 151, excludeStart
   const widenMode = isEndless ? 'endless' : (isGen2 ? 'gen2' : 'none');
   const bucket = getBstBucket(range.min, widenMode);
 
-  const starterIds = excludeStarters ? (minGenId >= 152 ? GEN2_STARTER_IDS : STARTER_IDS) : [];
+  const starterIds = excludeStarters ? (minGenId >= 252 ? GEN3_STARTER_IDS : minGenId >= 152 ? GEN2_STARTER_IDS : STARTER_IDS) : [];
   const starterSet = new Set(starterIds);
   const larvitarLine = new Set([246, 247, 248]);
   // Base eligibility: drops legendaries, starters, and the larvitar back-half gate.
@@ -1189,6 +1397,7 @@ function createInstance(species, level, isShiny = false, moveTier = 1) {
 // Starters
 const STARTER_IDS = [1, 4, 7];
 const GEN2_STARTER_IDS = [152, 155, 158];
+const GEN3_STARTER_IDS = [252, 255, 258];
 
 // All non-legendary, non-starter species ids of a given type within a gen range.
 // Uses the in-memory static pokedex (loaded at boot) so it's synchronous.
@@ -1196,7 +1405,7 @@ function getSpeciesIdsByType(type, maxGenId = 151) {
   const t = (type || '').toLowerCase();
   const ids = [];
   for (let id = 1; id <= maxGenId; id++) {
-    if (LEGENDARY_ID_SET.has(id) || STARTER_IDS.includes(id) || GEN2_STARTER_IDS.includes(id)) continue;
+    if (LEGENDARY_ID_SET.has(id) || STARTER_IDS.includes(id) || GEN2_STARTER_IDS.includes(id) || GEN3_STARTER_IDS.includes(id)) continue;
     const types = getSpeciesTypes(id);
     if (types && types.some(x => x.toLowerCase() === t)) ids.push(id);
   }
@@ -1703,6 +1912,10 @@ const BRANCHING_EVOLUTIONS = {
     { into: 266, level: 7, name: 'Silcoon', types: ['Bug'] },
     { into: 268, level: 7, name: 'Cascoon', types: ['Bug'] },
   ],
+  290: [ // Nincada
+    { into: 291, level: 20, name: 'Ninjask',  types: ['Bug', 'Flying'] },
+    { into: 292, level: 20, name: 'Shedinja', types: ['Bug', 'Ghost'] },
+  ],
   412: [ // Burmy
     { into: 414, level: 20, name: 'Mothim',   types: ['Bug', 'Flying'] },
     { into: 413, level: 20, name: 'Wormadam', types: ['Bug', 'Grass']  },
@@ -1797,6 +2010,22 @@ const ACHIEVEMENTS = [
   { id: 'g2_shiny_squad',  name: 'Johto Shiny Squad', desc: 'Beat Gen 2 with every Pokémon on your team shiny',      icon: '💫', img: 'item:silk-scarf', category: 'gen2_chal' },
   { id: 'g2_single_stage', name: 'Johto Purist',      desc: 'Beat Gen 2 with a team of Pokémon that never evolve',  icon: '🥚', img: 'item:stone-plate', category: 'gen2_chal' },
   { id: 'g2_no_gen2',      name: 'Time Traveler',     desc: 'Beat the Gen 2 Elite Four without a Gen 2 Pokémon on your team', icon: '🧭', img: 'item:ability-capsule', category: 'gen2_chal' },
+  // ---- Gen 3 — Normal ----
+  { id: 'g3_grass',     name: 'Hoenn Grass Champion', desc: 'Beat Gen 3 with Treecko as your starter', icon: '🌱', img: 'item:leaf-stone',  category: 'gen3_norm' },
+  { id: 'g3_fire',      name: 'Hoenn Fire Champion',  desc: 'Beat Gen 3 with Torchic as your starter', icon: '🔥', img: 'item:fire-stone',  category: 'gen3_norm' },
+  { id: 'g3_water',     name: 'Hoenn Water Champion', desc: 'Beat Gen 3 with Mudkip as your starter',  icon: '🌊', img: 'item:water-stone', category: 'gen3_norm' },
+  // ---- Gen 3 — Nuzlocke ----
+  { id: 'g3_nuz_grass', name: 'Hoenn Survivor: Grass', desc: 'Beat a Gen 3 Nuzlocke run with Treecko as your starter', icon: '🌱', img: 'item:leaf-stone',  category: 'gen3_nuz' },
+  { id: 'g3_nuz_fire',  name: 'Hoenn Survivor: Fire',  desc: 'Beat a Gen 3 Nuzlocke run with Torchic as your starter', icon: '🔥', img: 'item:fire-stone',  category: 'gen3_nuz' },
+  { id: 'g3_nuz_water', name: 'Hoenn Survivor: Water', desc: 'Beat a Gen 3 Nuzlocke run with Mudkip as your starter',  icon: '🌊', img: 'item:water-stone', category: 'gen3_nuz' },
+  { id: 'g3_nuz_clear', name: 'Hoenn Nuzlocke',        desc: 'Beat a Gen 3 Nuzlocke run',                              icon: '☠️', img: 'item:sky-plate', category: 'gen3_nuz' },
+  // ---- Gen 3 — Challenges ----
+  { id: 'g3_nocenter',     name: 'Hoenn Ironman',     desc: 'Beat Gen 3 without using a Pokémon Center (any mode)',            icon: '🏃', img: 'item:shell-bell', category: 'gen3_chal' },
+  { id: 'g3_norival',      name: 'Team Buster',       desc: 'Beat Gen 3 without ever defeating Team Aqua/Magma (any mode)',    icon: '🚫', img: 'item:red-orb', category: 'gen3_chal' },
+  { id: 'g3_monotype',     name: 'Hoenn Type Master', desc: 'Beat Gen 3 with a team that all shares a single type',            icon: '🔣', img: 'item:choice-band', category: 'gen3_chal' },
+  { id: 'g3_shiny_squad',  name: 'Hoenn Shiny Squad', desc: 'Beat Gen 3 with every Pokémon on your team shiny',                icon: '💫', img: 'item:blue-orb', category: 'gen3_chal' },
+  { id: 'g3_single_stage', name: 'Hoenn Purist',      desc: 'Beat Gen 3 with a team of Pokémon that never evolve',             icon: '🥚', img: 'item:earth-plate', category: 'gen3_chal' },
+  { id: 'g3_no_gen3',      name: 'Foreign Champion',  desc: 'Beat the Gen 3 Elite Four without a Gen 3 Pokémon on your team',  icon: '🧭', img: 'item:zap-plate', category: 'gen3_chal' },
 ];
 
 // Resolves an achievement's `img` token to an <img> tag, falling back to the
@@ -2074,7 +2303,7 @@ function harvestHofUnlocks(entries) {
 
 function recordHofIndexFromEntry(entry) { harvestHofUnlocks([entry]); }
 
-function saveHallOfFameEntry(team, runNumber, hardMode, endless = false, stageNumber = null, starterSpeciesId = null, gen2Mode = false) {
+function saveHallOfFameEntry(team, runNumber, hardMode, endless = false, stageNumber = null, starterSpeciesId = null, gen2Mode = false, gen = null) {
   const entries = getHallOfFame();
   const entry = {
     savedAt: Date.now(),
@@ -2082,6 +2311,8 @@ function saveHallOfFameEntry(team, runNumber, hardMode, endless = false, stageNu
     hardMode: !!hardMode,
     endless: !!endless,
     gen2Mode: !!gen2Mode,
+    // '1' | '2' | '3' | 'all' — legacy entries lack this; filters fall back to gen2Mode.
+    gen: gen || (gen2Mode ? '2' : '1'),
     stageNumber: stageNumber ?? null,
     starterSpeciesId: starterSpeciesId ?? null,
     date: new Date().toLocaleDateString(),

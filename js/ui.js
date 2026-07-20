@@ -3864,6 +3864,9 @@ function openAchievementsModal() {
     { key: 'gen2_norm', label: 'Gen 2 — Normal' },
     { key: 'gen2_nuz',  label: 'Gen 2 — Nuzlocke' },
     { key: 'gen2_chal', label: 'Gen 2 — Challenges' },
+    { key: 'gen3_norm', label: 'Gen 3 — Normal' },
+    { key: 'gen3_nuz',  label: 'Gen 3 — Nuzlocke' },
+    { key: 'gen3_chal', label: 'Gen 3 — Challenges' },
     { key: 'tower',     label: 'Battle Tower' },
     { key: 'general',   label: 'General' },
   ];
