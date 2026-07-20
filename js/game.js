@@ -59,6 +59,12 @@ function clearSavedRun() {
   localStorage.removeItem('poke_current_run');
 }
 
+// Which generation this run plays: '1' | '2' | '3' | 'all'. Falls back to the
+// legacy boolean pair for saves created before runGen existed.
+function getRunGen() {
+  return state.runGen || (state.bothGens ? 'all' : state.gen2Mode ? '2' : '1');
+}
+
 // Reset-run safety net: before a reset wipes localStorage, copy the current
 // run + endless state into "previous" slots. The IIFE below restores them on
 // the next page load, so an accidental reset can be undone by refreshing.
@@ -101,9 +107,10 @@ async function initGame() {
   // initCloudSave handles the post-merge push itself.
   if (typeof initCloudSave === 'function') await initCloudSave();
   // Generation toggle — selection is read when Normal/Nuzlocke is clicked
-  // and persists across reloads via localStorage.
+  // and persists across reloads via localStorage. The stored 'both' value
+  // means "Tot" (all generations combined) and maps to runGen 'all'.
   const _savedGen = localStorage.getItem('poke_selected_gen');
-  let selectedGen = (_savedGen === '2' || _savedGen === 'both') ? _savedGen : '1'; // '1' | '2' | 'both'
+  let selectedGen = (_savedGen === '2' || _savedGen === '3' || _savedGen === 'both') ? _savedGen : '1'; // '1' | '2' | '3' | 'both'
   const syncGenButtons = () => {
     document.querySelectorAll('#gen-toggle .gen-btn').forEach(b =>
       b.classList.toggle('gen-btn--active', String(b.dataset.gen) === selectedGen));
@@ -116,8 +123,9 @@ async function initGame() {
       syncGenButtons();
     };
   });
-  document.getElementById('btn-new-run').onclick  = () => startNewRun(false, selectedGen === '2', null, selectedGen === 'both');
-  document.getElementById('btn-hard-run').onclick = () => startNewRun(true,  selectedGen === '2', null, selectedGen === 'both');
+  const selectedRunGen = () => selectedGen === 'both' ? 'all' : selectedGen;
+  document.getElementById('btn-new-run').onclick  = () => startNewRun(false, selectedRunGen());
+  document.getElementById('btn-hard-run').onclick = () => startNewRun(true,  selectedRunGen());
 
   const endlessBtn = document.getElementById('btn-endless-run');
   if (endlessBtn) {
@@ -183,21 +191,30 @@ async function initGame() {
   }
 }
 
-async function startNewRun(nuzlockeMode = false, gen2Mode = false, forcedStarterId = null, bothGens = false) {
+// gen: '1' | '2' | '3' | 'all'. The legacy gen2Mode/bothGens booleans are kept
+// in sync on state so the many existing reads (and old saves) keep working;
+// new code should read getRunGen() instead.
+async function startNewRun(nuzlockeMode = false, gen = '1', forcedStarterId = null) {
   runGeneration++;
   clearEndlessState();
   const savedTrainer = localStorage.getItem('poke_trainer') || null;
   const seed = (Date.now() ^ (Math.random() * 0x100000000 | 0)) >>> 0;
   seedRng(seed);
-  state = { currentMap: 0, currentNode: null, team: [], items: [], badges: 0, map: null, eliteIndex: 0, trainer: savedTrainer || 'boy', starterSpeciesId: null, maxTeamSize: 1, nuzlockeMode, gen2Mode, bothGens, silverBeaten: 0, usedPokecenter: false, pickedUpItem: false, runSeed: seed };
+  const gen2Mode = gen === '2';
+  const bothGens = gen === 'all';
+  state = { currentMap: 0, currentNode: null, team: [], items: [], badges: 0, map: null, eliteIndex: 0, trainer: savedTrainer || 'boy', starterSpeciesId: null, maxTeamSize: 1, nuzlockeMode, runGen: gen, gen2Mode, bothGens, silverBeaten: 0, usedPokecenter: false, pickedUpItem: false, runSeed: seed };
+  if (gen === '3') {
+    // Which villain team ambushes this run (rival-slot encounters).
+    state.villainTeam = rng() < 0.5 ? 'aqua' : 'magma';
+  }
   if (bothGens) {
     // Roll which generation's leader appears at each gym slot, and a random
-    // Elite Four lineup (4 members + champion), mixing Gen 1 and Gen 2.
-    state.gymGens = Array.from({ length: 8 }, () => (rng() < 0.5 ? 1 : 2));
+    // Elite Four lineup (4 members + champion), mixing all generations.
+    state.gymGens = Array.from({ length: 8 }, () => 1 + Math.floor(rng() * 3));
     const elitePool = [];
-    for (let idx = 0; idx < 4; idx++) { elitePool.push({ gen: 1, idx }); elitePool.push({ gen: 2, idx }); }
+    for (let idx = 0; idx < 4; idx++) { elitePool.push({ gen: 1, idx }); elitePool.push({ gen: 2, idx }); elitePool.push({ gen: 3, idx }); }
     for (let i = elitePool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [elitePool[i], elitePool[j]] = [elitePool[j], elitePool[i]]; }
-    const champ = rng() < 0.5 ? { gen: 1, idx: 4 } : { gen: 2, idx: 4 };
+    const champ = { gen: 1 + Math.floor(rng() * 3), idx: 4 };
     state.eliteLineup = [...elitePool.slice(0, 4), champ];
   }
   if (forcedStarterId && savedTrainer) {
@@ -2715,7 +2732,7 @@ function showWinScreen() {
       : '';
     return `<div style="display:flex;flex-direction:column;align-items:center;">${renderPokemonCard(p, false, false)}${itemHtml}</div>`;
   }).join('');
-  document.getElementById('btn-play-again').onclick = () => startNewRun(state.nuzlockeMode, state.gen2Mode);
+  document.getElementById('btn-play-again').onclick = () => startNewRun(state.nuzlockeMode, getRunGen());
 
   // Track elite four wins
   const wins = incrementEliteWins();
@@ -3036,14 +3053,14 @@ function confirmResetRun() {
   const starterId = state.starterSpeciesId;
   const starterShiny = !!state.starterWasShiny;
   const nuz = !!state.nuzlockeMode;
-  const gen2 = !!state.gen2Mode;
+  const runGen = getRunGen();
   const isEndless = !!state.isEndlessMode;
   const stage = endlessState?.stageNumber ?? 1;
   clearSavedRun();
   if (isEndless) {
     startEndlessRun(stage, starterId, starterShiny);
   } else {
-    startNewRun(nuz, gen2, starterId);
+    startNewRun(nuz, runGen, starterId);
   }
 }
 
