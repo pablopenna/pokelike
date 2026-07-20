@@ -1301,25 +1301,31 @@ function getBstBucket(rangeMin, widenMode) {
 // species — so previously-levelled out-of-gen Pokemon appear at their natural
 // pre-gating per-slot rate while unlevelled out-of-gen ones still can't show up.
 async function getCatchChoices(mapIndex, count = 3, maxGenId = 151, excludeStarters = false, minGenId = 1, allowLevelledOutOfGen = false) {
+  const runGen  = (typeof getRunGen === 'function' && typeof state !== 'undefined') ? getRunGen() : '1';
   const isGen2  = typeof state !== 'undefined' && state.gen2Mode;
-  const ranges  = isGen2 ? GEN2_MAP_BST_RANGES : MAP_BST_RANGES;
+  const isGen3  = runGen === '3';
+  const ranges  = isGen3 ? GEN3_MAP_BST_RANGES : isGen2 ? GEN2_MAP_BST_RANGES : MAP_BST_RANGES;
   const range   = ranges[Math.min(mapIndex, ranges.length - 1)];
   const pool    = await getSpeciesPool();
 
-  // Gen 2 widens higher tiers with the next-lower tier; the Battle Tower widens
+  // Gen 2/3 widen higher tiers with the next-lower tier; the Battle Tower widens
   // every tier (see getBstBucket) so no bucket is starved by the level curve.
   const isEndless = typeof state !== 'undefined' && state.isEndlessMode;
-  const widenMode = isEndless ? 'endless' : (isGen2 ? 'gen2' : 'none');
+  const widenMode = isEndless ? 'endless' : ((isGen2 || isGen3) ? 'gen2' : 'none');
   const bucket = getBstBucket(range.min, widenMode);
 
   const starterIds = excludeStarters ? (minGenId >= 252 ? GEN3_STARTER_IDS : minGenId >= 152 ? GEN2_STARTER_IDS : STARTER_IDS) : [];
   const starterSet = new Set(starterIds);
   const larvitarLine = new Set([246, 247, 248]);
+  // Gen 3's pseudo-legendary bases (Bagon/Beldum lines) get the same early-map
+  // gate Larvitar has in Gen 2 — their low base BST lands them in map-1 buckets.
+  const pseudoGen3 = new Set([371, 372, 373, 374, 375, 376]);
   // Base eligibility: drops legendaries, starters, and the larvitar back-half gate.
   // No gen-range check here so the same predicate seeds both the full and in-gen pools.
   const baseEligible = id => {
     if (LEGENDARY_IDS.includes(id) || starterSet.has(id)) return false;
     if (larvitarLine.has(id) && typeof state !== 'undefined' && state.gen2Mode && state.currentMap < 2) return false;
+    if (pseudoGen3.has(id) && isGen3 && typeof state !== 'undefined' && state.currentMap < 2) return false;
     return true;
   };
   const inGenOk = id => {
@@ -1398,6 +1404,37 @@ function createInstance(species, level, isShiny = false, moveTier = 1) {
 const STARTER_IDS = [1, 4, 7];
 const GEN2_STARTER_IDS = [152, 155, 158];
 const GEN3_STARTER_IDS = [252, 255, 258];
+
+// Per-generation campaign config, keyed by runGen ('1'|'2'|'3'|'all').
+// Tables are thunks so definition order in this file doesn't matter.
+// 'all' resolves gyms/elite per-map via state.gymGens / state.eliteLineup and
+// keeps Gen 1 art, badges and level curve (the difficulty anchor).
+const GEN_RUN_CONFIG = {
+  '1': { starters: STARTER_IDS,
+         catch: { minGenId: 1, maxGenId: 151 },
+         leaders: () => GYM_LEADERS, elite: () => ELITE_4,
+         levels: () => MAP_LEVEL_RANGES, badgeOffset: 0,
+         mapBg: i => `ui/mapsNormalMode/map${i + 1}.png`,
+         eliteTitle: 'Elite Four & Champion' },
+  '2': { starters: GEN2_STARTER_IDS,
+         catch: { minGenId: 152, maxGenId: 251 },
+         leaders: () => JOHTO_GYM_LEADERS, elite: () => GEN2_ELITE_4,
+         levels: () => GEN2_MAP_LEVEL_RANGES, badgeOffset: 8,
+         mapBg: i => `ui/mapsGen2/${i + 1}.png`,
+         eliteTitle: 'Elite Four & Lance' },
+  '3': { starters: GEN3_STARTER_IDS,
+         catch: { minGenId: 252, maxGenId: 386 },
+         leaders: () => HOENN_GYM_LEADERS, elite: () => GEN3_ELITE_4,
+         levels: () => GEN3_MAP_LEVEL_RANGES, badgeOffset: 16,
+         mapBg: i => `ui/mapsGen3/${i + 1}.png`,
+         eliteTitle: 'Elite Four & Steven' },
+  'all': { starters: [...STARTER_IDS, ...GEN2_STARTER_IDS, ...GEN3_STARTER_IDS],
+         catch: { minGenId: 1, maxGenId: 386 },
+         leaders: () => GYM_LEADERS, elite: () => ELITE_4,
+         levels: () => MAP_LEVEL_RANGES, badgeOffset: 0,
+         mapBg: i => `ui/mapsNormalMode/map${i + 1}.png`,
+         eliteTitle: 'Elite Four & Champion' },
+};
 
 // All non-legendary, non-starter species ids of a given type within a gen range.
 // Uses the in-memory static pokedex (loaded at boot) so it's synchronous.

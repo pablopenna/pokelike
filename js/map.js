@@ -60,9 +60,14 @@ function weightedRandom(weights) {
 function generateMap(mapIndex, nuzlockeMode = false, gen2Mode = false) {
   // Layer sizes: start(1), catch/battle(2), content, boss(1)
   const CONTENT_SIZES = [4, 5, 4, 5, 4, 5, 4, 5, 4, 5, 3]; // 11 content layers (+2 rows for difficulty)
-  // Silver shows up as an optional node on these gen2 maps. Players who want
-  // the bonus XP can route through him; others can take a different path.
-  const hasSilverNode = gen2Mode && [1, 3, 5, 7].includes(mapIndex);
+  // Gen 3 mirrors the Gen 2 map structure (flat weights, deterministic ladder,
+  // rival nodes) — resolved from run state since the caller passes gen2Mode.
+  const gen3Mode = typeof state !== 'undefined' && typeof getRunGen === 'function' && getRunGen() === '3';
+  const gen2Like = gen2Mode || gen3Mode;
+  // The rival (Silver / Team Aqua-Magma) shows up as an optional node on these
+  // maps. Players who want the bonus XP can route through it; others can take
+  // a different path.
+  const hasSilverNode = gen2Like && [1, 3, 5, 7].includes(mapIndex);
   const contentCount  = CONTENT_SIZES.length;
   const bossLayerIdx  = 2 + CONTENT_SIZES.length;
   const bossId        = `n${bossLayerIdx}_0`;
@@ -73,9 +78,9 @@ function generateMap(mapIndex, nuzlockeMode = false, gen2Mode = false) {
     const availableKeys = TRAINER_SPRITE_KEYS.filter(k => {
       if (k === 'aceTrainer' && mapIndex >= 6) return false;
       if (k === 'policeman'  && mapIndex >= 4) return false;
-      // Gen 2-only sprites are hidden in Gen 1 mode (and vice versa).
-      if (!gen2Mode && GEN2_ONLY_TRAINER_KEYS.has(k)) return false;
-      if (gen2Mode  && GEN1_ONLY_TRAINER_KEYS.has(k)) return false;
+      // Gen 2/3-only sprites are hidden in Gen 1 mode (and vice versa).
+      if (!gen2Like && GEN2_ONLY_TRAINER_KEYS.has(k)) return false;
+      if (gen2Like  && GEN1_ONLY_TRAINER_KEYS.has(k)) return false;
       return true;
     });
     let h = 0;
@@ -91,7 +96,7 @@ function generateMap(mapIndex, nuzlockeMode = false, gen2Mode = false) {
 
   // Pick a weighted-random node type; ci = content layer index (0–5)
   const pickType = (ci) => {
-    const w = gen2Mode
+    const w = gen2Like
       ? { ...GEN2_NODE_WEIGHTS }
       : { ...NODE_WEIGHTS[Math.min(ci, NODE_WEIGHTS.length - 1)] };
     if (mapIndex >= 5 && ci >= 2 && !(typeof state !== 'undefined' && state.isEndlessMode)) w.legendary = 2;
@@ -349,6 +354,17 @@ const JOHTO_GYM_LEADER_SPRITES = [
   'sprites/gen2/clair.png',
 ];
 
+const HOENN_GYM_LEADER_SPRITES = [
+  'sprites/gen3/roxanne.png',
+  'sprites/gen3/brawly.png',
+  'sprites/gen3/wattson.png',
+  'sprites/gen3/flannery.png',
+  'sprites/gen3/norman.png',
+  'sprites/gen3/winona.png',
+  'sprites/gen3/tita-liza.png',
+  'sprites/gen3/wallace.png',
+];
+
 const KANTO_GYM_LEADER_SPRITES = [
   'https://play.pokemonshowdown.com/sprites/trainers/brock.png',
   'https://play.pokemonshowdown.com/sprites/trainers/misty.png',
@@ -362,9 +378,11 @@ const KANTO_GYM_LEADER_SPRITES = [
 
 function getNodeSprite(node) {
   const gen2 = typeof state !== 'undefined' && state.gen2Mode;
+  const gen3 = typeof state !== 'undefined' && typeof getRunGen === 'function' && getRunGen() === '3';
+  const gen2Like = gen2 || gen3; // gen 3 reuses the gen 2 trainer re-skins
   const ICON_SPRITES = {
-    [NODE_TYPES.BATTLE]:    gen2 ? 'sprites/gen2/grass.png'    : 'sprites/grass.png',
-    [NODE_TYPES.CATCH]:     gen2 ? 'sprites/gen2/pokeball.png' : 'sprites/catchPokemon.png',
+    [NODE_TYPES.BATTLE]:    gen3 ? 'sprites/gen3/grass.png'    : gen2 ? 'sprites/gen2/grass.png'    : 'sprites/grass.png',
+    [NODE_TYPES.CATCH]:     gen3 ? 'sprites/gen3/pokeball.png' : gen2 ? 'sprites/gen2/pokeball.png' : 'sprites/catchPokemon.png',
     [NODE_TYPES.ITEM]:      'sprites/itemIcon.png',
     [NODE_TYPES.TRADE]:      'sprites/tradeIcon.png',
     [NODE_TYPES.LEGENDARY]:  'sprites/legendaryEncounter.png',
@@ -376,15 +394,15 @@ function getNodeSprite(node) {
   if (node.type === NODE_TYPES.TRAINER) {
     const key = node.trainerSprite || (() => {
       const keys = TRAINER_SPRITE_KEYS.filter(k => {
-        if (!gen2 && GEN2_ONLY_TRAINER_KEYS.has(k)) return false;
-        if (gen2  && GEN1_ONLY_TRAINER_KEYS.has(k)) return false;
+        if (!gen2Like && GEN2_ONLY_TRAINER_KEYS.has(k)) return false;
+        if (gen2Like  && GEN1_ONLY_TRAINER_KEYS.has(k)) return false;
         return true;
       });
       let h = 0;
       for (const c of node.id) h = (h * 31 + c.charCodeAt(0)) | 0;
       return keys[Math.abs(h) % keys.length];
     })();
-    return getTrainerSpritePath(key, gen2);
+    return getTrainerSpritePath(key, gen2Like);
   }
   if (node.type === NODE_TYPES.BOSS) {
     if (typeof state !== 'undefined' && state.isEndlessMode) return 'sprites/misteryTrainer.png';
@@ -392,9 +410,15 @@ function getNodeSprite(node) {
     if (typeof state !== 'undefined' && state.bothGens) {
       if (mi >= 0 && mi < 8) {
         const gen = (state.gymGens && state.gymGens[mi]) || 1;
-        return gen === 2 ? JOHTO_GYM_LEADER_SPRITES[mi] : GYM_LEADER_SPRITES[mi];
+        return gen === 3 ? HOENN_GYM_LEADER_SPRITES[mi]
+             : gen === 2 ? JOHTO_GYM_LEADER_SPRITES[mi]
+             : GYM_LEADER_SPRITES[mi];
       }
       return 'sprites/champ.png';
+    }
+    if (gen3) {
+      if (mi === 8) return 'sprites/gen3/steven.png';
+      if (mi >= 0 && mi < 8) return HOENN_GYM_LEADER_SPRITES[mi];
     }
     if (typeof state !== 'undefined' && state.gen2Mode) {
       if (mi === 17) return 'https://play.pokemonshowdown.com/sprites/trainers/red.png';
@@ -405,7 +429,15 @@ function getNodeSprite(node) {
     if (mi >= 0 && mi < GYM_LEADER_SPRITES.length) return GYM_LEADER_SPRITES[mi];
     return 'sprites/champ.png';
   }
-  if (node.type === NODE_TYPES.SILVER) return 'sprites/gen2/silver.png';
+  if (node.type === NODE_TYPES.SILVER) {
+    if (gen3) {
+      const team = (state.villainTeam === 'magma') ? 'magma' : 'aqua';
+      const isLeaderMap = state.currentMap === 7;
+      if (team === 'magma') return isLeaderMap ? 'sprites/gen3/maxie.png' : 'sprites/gen3/magma-admin.png';
+      return isLeaderMap ? 'sprites/gen3/archie.png' : 'sprites/gen3/aqua-admin.png';
+    }
+    return 'sprites/gen2/silver.png';
+  }
   return null;
 }
 
@@ -793,9 +825,14 @@ function getSilverHoverLabel() {
   const SILVER_ENC_BY_MAP = { 1: 0, 3: 1, 5: 2, 7: 3 };
   const mapIdx     = (typeof state !== 'undefined') ? state.currentMap : 1;
   const idx        = SILVER_ENC_BY_MAP[mapIdx] ?? 0;
-  const data       = SILVER_ENCOUNTERS[Math.min(idx, SILVER_ENCOUNTERS.length - 1)];
+  // Gen 3: the rival slot is a Team Aqua/Magma ambush instead of Silver.
+  const isGen3 = typeof state !== 'undefined' && typeof getRunGen === 'function' && getRunGen() === '3'
+    && typeof AQUA_MAGMA_ENCOUNTERS !== 'undefined';
+  const data = isGen3
+    ? AQUA_MAGMA_ENCOUNTERS[state.villainTeam || 'aqua'][Math.min(idx, 3)]
+    : SILVER_ENCOUNTERS[Math.min(idx, SILVER_ENCOUNTERS.length - 1)];
   const team       = data.team.slice();
-  const starterId  = typeof state !== 'undefined' ? state.starterSpeciesId : null;
+  const starterId  = (!isGen3 && typeof state !== 'undefined') ? state.starterSpeciesId : null;
   const starterArr = starterId && typeof SILVER_STARTER_LINES !== 'undefined' ? SILVER_STARTER_LINES[starterId] : null;
   if (starterArr && team.length) {
     const stage  = idx < 1 ? 0 : idx < 3 ? 1 : 2;
@@ -809,7 +846,8 @@ function getSilverHoverLabel() {
   const noPermaDeath = nuzlockeMode
     ? `<div style="color:#7ecf7e;font-size:9px;margin-bottom:4px;">No Perma-Death</div>`
     : '';
-  return `<div style="font-weight:bold;margin-bottom:2px;">Rival Silver</div>` +
+  const title = isGen3 ? data.leader : 'Rival Silver';
+  return `<div style="font-weight:bold;margin-bottom:2px;">${title}</div>` +
          `<div style="color:#ffd76b;font-size:9px;">+4 Levels (Double XP)</div>` +
          `<div style="color:#7ecf7e;font-size:9px;margin-bottom:4px;">Heals you after battle</div>` +
          noPermaDeath +
@@ -821,9 +859,13 @@ function getNodeLabel(node) {
   if (node.type === NODE_TYPES.BOSS) {
     const mi = node.mapIndex ?? -1;
     const bothGens = typeof state !== 'undefined' && state.bothGens;
-    const isGen2 = (typeof state !== 'undefined' && state.gen2Mode) ||
-      (bothGens && mi >= 0 && mi < 8 && state.gymGens && state.gymGens[mi] === 2);
-    const leaders = isGen2 ? (typeof JOHTO_GYM_LEADERS !== 'undefined' ? JOHTO_GYM_LEADERS : null) : (typeof GYM_LEADERS !== 'undefined' ? GYM_LEADERS : null);
+    const rolledGen = bothGens && mi >= 0 && mi < 8 && state.gymGens ? state.gymGens[mi] : 0;
+    const isGen3 = (typeof state !== 'undefined' && typeof getRunGen === 'function' && getRunGen() === '3') ||
+      rolledGen === 3;
+    const isGen2 = !isGen3 && ((typeof state !== 'undefined' && state.gen2Mode) || rolledGen === 2);
+    const leaders = isGen3 ? (typeof HOENN_GYM_LEADERS !== 'undefined' ? HOENN_GYM_LEADERS : null)
+      : isGen2 ? (typeof JOHTO_GYM_LEADERS !== 'undefined' ? JOHTO_GYM_LEADERS : null)
+      : (typeof GYM_LEADERS !== 'undefined' ? GYM_LEADERS : null);
     if (leaders && mi >= 0 && mi < leaders.length) {
       const leader = leaders[mi];
       const teamHtml = leader.team.map(p =>
@@ -831,13 +873,15 @@ function getNodeLabel(node) {
       ).join('');
       return `<div style="font-weight:bold;margin-bottom:4px;">${leader.name} — ${leader.type} Gym</div>${teamHtml}`;
     }
+    if (isGen3 && mi === 8) return '<div style="font-weight:bold;">Elite Four &amp; Steven</div>';
     if (isGen2 && mi === 8) return '<div style="font-weight:bold;">Elite Four &amp; Lance</div>';
     if (typeof ELITE_4 !== 'undefined' && mi === 8) {
       return '<div style="font-weight:bold;">Elite Four &amp; Champion</div>';
     }
     return 'Gym Leader';
   }
-  const isGen2Mode = typeof state !== 'undefined' && state.gen2Mode;
+  const isGen2Mode = typeof state !== 'undefined' &&
+    (state.gen2Mode || (typeof getRunGen === 'function' && getRunGen() === '3'));
   const labels = {
     [NODE_TYPES.START]:      'Start',
     [NODE_TYPES.BATTLE]:     'Wild Battle — +1 level',

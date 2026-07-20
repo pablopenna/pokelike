@@ -23,10 +23,14 @@ const POKELIKE_RULES = {
   generations: {
     "1": "Gen I (Kanto) — Pokémon #1-151. 8 Kanto Gym Leaders, then the Kanto Elite Four + Champion.",
     "2": "Gen II (Johto) — Pokémon #1-251. 8 Johto Gym Leaders, then the Johto Elite Four + Lance.",
+    "3":
+      "Gen III (Hoenn) — Pokémon #252-386 catchable. 8 Hoenn Gym Leaders (Roxanne through Wallace), " +
+      "then the Hoenn Elite Four + Champion Steven. Team Aqua or Team Magma (rolled per run) ambushes " +
+      "you at the rival slots on maps 2/4/6/8, ending with Archie/Maxie.",
     both:
-      "Gen I+II — Pokémon #1-251 catchable. Each map's Gym is RANDOM between that slot's Gen I " +
-      "and Gen II leader. The final league is 4 random Elite Four members + 1 random Champion. " +
-      "You may choose any of the 6 starters (both gens). Boss levels are normalized to a per-map " +
+      "Tot (all gens) — Pokémon #1-386 catchable. Each map's Gym is RANDOM among that slot's Gen I, " +
+      "Gen II and Gen III leader. The final league is 4 random Elite Four members + 1 random Champion. " +
+      "You may choose any of the 9 starters (all gens). Boss levels are normalized to a per-map " +
       "target so difficulty stays consistent.",
   },
 
@@ -54,7 +58,7 @@ const POKELIKE_RULES = {
       LEGENDARY: "Legendary Pokémon encounter.",
       MOVE_TUTOR: "Teach/upgrade moves.",
       TRADE: "Swap a Pokémon for one 3 levels higher.",
-      SILVER: "Rival (Silver) battle — Gen II only.",
+      SILVER: "Rival battle — Silver in Gen II, a Team Aqua/Magma ambush in Gen III. Double XP, full heal after, Nuzlocke-exempt.",
     },
   },
 
@@ -95,7 +99,7 @@ const POKELIKE_RULES = {
       "Selectors for driving the game programmatically. Buttons are clicked with .click(); read state " +
       "from the DOM. The current screen is the visible element with class 'screen'.",
     title_screen: {
-      generation_toggle: '#gen-toggle .gen-btn[data-gen="1" | "2" | "both"]  (click to select generation)',
+      generation_toggle: '#gen-toggle .gen-btn[data-gen="1" | "2" | "3" | "both"]  (click to select generation; "both" = Tot, all gens)',
       new_run: "#btn-new-run  (Normal Mode)",
       nuzlocke: "#btn-hard-run  (Nuzlocke)",
       battle_tower: "#btn-endless-run  (Battle Tower)",
