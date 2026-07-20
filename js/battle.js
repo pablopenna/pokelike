@@ -36,7 +36,9 @@ function applyStatus(pokemon, status, side, idx, log) {
   log.push({ type: 'status_apply', side, idx, name: pokemon.nickname || pokemon.name, status });
 }
 
-function calcDamage(attacker, defender, move, items, defItems = []) {
+// Deterministic core of the damage formula — everything except crit and
+// variance. Consumes NO rng, so it doubles as the AI's damage preview.
+function damagePipeline(attacker, defender, move, items, defItems = []) {
   const lvl = attacker.level;
   const isSpecial = (attacker.baseStats?.special || 0) >= (attacker.baseStats?.atk || 0);
   const atk = getEffectiveStat(attacker, isSpecial ? 'special' : 'atk', items, attacker.stages);
@@ -73,6 +75,12 @@ function calcDamage(attacker, defender, move, items, defItems = []) {
   // Red Card: defender takes half damage from super-effective hits
   if (hasItem(defItems, 'red_card') && typeEff >= 2) damage = Math.floor(damage * 0.5);
 
+  return { damage, typeEff, moveType };
+}
+
+function calcDamage(attacker, defender, move, items, defItems = []) {
+  let { damage, typeEff, moveType } = damagePipeline(attacker, defender, move, items, defItems);
+
   // Crit chance: 6.25% base, +20% with scope_lens or razor_claw
   let critChance = 0.0625;
   if (hasItem(items, 'scope_lens')) critChance = 0.20;
@@ -83,6 +91,17 @@ function calcDamage(attacker, defender, move, items, defItems = []) {
   damage = typeEff === 0 ? 0 : Math.max(1, Math.floor(damage * dmgVariance));
 
   return { damage, typeEff, moveType, crit };
+}
+
+// Deterministic damage estimate for the battle AI: the shared pipeline at
+// average variance, no crit roll. Consumes NO rng (the AI must be able to rank
+// moves and predict KOs without touching the battle's RNG stream).
+function calcDamagePreview(attacker, defender, move) {
+  if (!move || move.noDamage) return 0;
+  const aItems = attacker.heldItem ? [attacker.heldItem] : [];
+  const dItems = defender.heldItem ? [defender.heldItem] : [];
+  const { damage, typeEff } = damagePipeline(attacker, defender, move, aItems, dItems);
+  return typeEff === 0 ? 0 : Math.floor(damage * 0.925); // 0.925 ≈ average variance
 }
 
 function getEffectiveStat(pokemon, stat, items, stages = null) {

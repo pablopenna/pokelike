@@ -2282,30 +2282,14 @@ async function doShinyNode(node) {
 function moveEffVs(move, defenderTypes) {
   return move.noDamage ? 0 : getTypeEffectiveness(move.type, defenderTypes || ['Normal']);
 }
-// Deterministic damage estimate (no crit/variance) — mirrors calcDamage's core
-// so the AI can rank moves and detect KOs without consuming the RNG.
-function estimateDamage(attacker, defender, move) {
-  if (!move || move.noDamage) return 0;
-  const lvl = attacker.level;
-  const isSpecial = (attacker.baseStats?.special || 0) >= (attacker.baseStats?.atk || 0);
-  const aItems = attacker.heldItem ? [attacker.heldItem] : [];
-  const dItems = defender.heldItem ? [defender.heldItem] : [];
-  const atk = getEffectiveStat(attacker, isSpecial ? 'special' : 'atk', aItems, attacker.stages);
-  const def = getEffectiveStat(defender, isSpecial ? 'spdef' : 'def', dItems, defender.stages);
-  const power = move.power || 40;
-  let dmg = (2 * lvl / 5 + 2) * power * atk / def / 50 + 2;
-  const eff = move.typeless ? 1 : getTypeEffectiveness(move.type, defender.types || ['Normal']);
-  if (eff === 0) return 0;
-  dmg *= eff;
-  if ((attacker.types || []).some(t => t.toLowerCase() === move.type.toLowerCase())) dmg *= 1.5;
-  return Math.floor(dmg * 0.925); // 0.925 ≈ average variance
-}
 // Best (highest expected damage) move of `attacker` against `defender`.
+// Damage estimates come from calcDamagePreview (battle.js) — the same pipeline
+// the resolver uses, at average variance, consuming no rng.
 function bestMoveVs(attacker, defender) {
   const moves = getMovesForPokemon(attacker);
   let best = moves[0], bestDmg = -1;
   for (const m of moves) {
-    const d = estimateDamage(attacker, defender, m);
+    const d = calcDamagePreview(attacker, defender, m);
     if (d > bestDmg) { bestDmg = d; best = m; }
   }
   return best;
@@ -2317,18 +2301,18 @@ function aiPlayerAction(active, team, idx, enemy) {
 // knocked out, bail to a Pokémon that survives (and ideally threatens) the player.
 function chooseEnemyAction(active, team, idx, playerActive, switchedLast) {
   const myMove = bestMoveVs(active, playerActive);
-  const myDmg = estimateDamage(active, playerActive, myMove);
+  const myDmg = calcDamagePreview(active, playerActive, myMove);
   if (myDmg >= playerActive.currentHp) return { type: 'attack', move: myMove }; // lethal — go for it
 
-  const playerDmg = estimateDamage(playerActive, active, bestMoveVs(playerActive, active));
+  const playerDmg = calcDamagePreview(playerActive, active, bestMoveVs(playerActive, active));
   const aboutToDie = playerDmg >= active.currentHp;
 
   if (aboutToDie && !switchedLast) {
     const cands = team.map((p, i) => ({ p, i })).filter(x => x.i !== idx && x.p.currentHp > 0);
     let pick = null, bestScore = -Infinity, pickSurvives = false;
     for (const c of cands) {
-      const incoming = estimateDamage(playerActive, c.p, bestMoveVs(playerActive, c.p));
-      const outgoing = estimateDamage(c.p, playerActive, bestMoveVs(c.p, playerActive));
+      const incoming = calcDamagePreview(playerActive, c.p, bestMoveVs(playerActive, c.p));
+      const outgoing = calcDamagePreview(c.p, playerActive, bestMoveVs(c.p, playerActive));
       const survives = incoming < c.p.currentHp;
       const score = (survives ? 1000 : 0) + outgoing - incoming;
       if (score > bestScore) { bestScore = score; pick = c.i; pickSurvives = survives; }
