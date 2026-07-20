@@ -136,12 +136,9 @@ async function initGame() {
       endlessBtn.style.pointerEvents = '';
       // Remove lock wrapper if it was injected in a previous initGame call
       const parent = endlessBtn.parentNode;
-      if (parent && parent.id !== 'title-screen' && !parent.classList.contains('screen')) {
+      if (parent && parent.classList.contains('endless-lock-wrap')) {
         const grandparent = parent.parentNode;
         if (grandparent) {
-          if (endlessBtn.style.marginTop === '0' || endlessBtn.style.marginTop === '0px') {
-            endlessBtn.style.marginTop = parent.style.marginTop || '';
-          }
           grandparent.insertBefore(endlessBtn, parent);
           parent.remove();
         }
@@ -151,8 +148,8 @@ async function initGame() {
       endlessBtn.disabled = true;
       endlessBtn.style.pointerEvents = 'none';
       const wrapper = document.createElement('div');
-      wrapper.style.cssText = `position:relative;display:block;margin-top:${endlessBtn.style.marginTop || '6px'};`;
-      endlessBtn.style.marginTop = '0';
+      wrapper.className = 'endless-lock-wrap';
+      wrapper.style.cssText = 'position:relative;display:block;';
       endlessBtn.parentNode.insertBefore(wrapper, endlessBtn);
       wrapper.appendChild(endlessBtn);
       const lockOverlay = document.createElement('div');

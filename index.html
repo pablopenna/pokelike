@@ -26,45 +26,72 @@
 <!-- Team hover card popup -->
 <div id="team-hover-card"></div>
 
-<!-- ===== TITLE SCREEN ===== -->
+<!-- ===== TITLE SCREEN (GBA / Emerald style) ===== -->
 <div id="title-screen" class="screen">
-  <div class="game-logo">POKELIKE</div>
-  <div class="game-subtitle">Pokemon Roguelike</div>
-  <div style="color:var(--text-dim);font-size:9px;margin-bottom:6px;cursor:pointer;" onclick="openPatchNotesModal()">v1.6 — patch notes</div>
-  <button id="btn-continue-run" class="btn-primary" style="display:none;margin-bottom:10px;">Continue Run</button>
-  <button id="btn-continue-endless" class="btn-primary" style="display:none;margin-bottom:10px;">Continue Battle Tower</button>
-  <div class="gen-toggle-wrap">
-    <span class="gen-toggle-label">Gen:</span>
-    <div id="gen-toggle" class="gen-toggle" title="Choose generation">
-      <button class="gen-btn gen-btn--active" data-gen="1" aria-label="Gen 1 (Kanto)">I</button>
-      <button class="gen-btn" data-gen="2" aria-label="Gen 2 (Johto)">II</button>
-      <button class="gen-btn" data-gen="3" aria-label="Gen 3 (Hoenn)">III</button>
-      <button class="gen-btn" data-gen="both" aria-label="All generations (Kanto + Johto + Hoenn)">Tot</button>
+  <div class="gba-title-col">
+
+    <header class="gba-logo-block">
+      <div class="game-logo">POKELIKE</div>
+      <div class="game-subtitle">Pokémon Roguelike</div>
+      <button class="gba-version-line" onclick="openPatchNotesModal()">v1.6 — patch notes</button>
+    </header>
+
+    <div class="gba-continue-slots">
+      <button id="btn-continue-run" class="gba-save-slot" style="display:none;"><span class="gba-slot-cursor">▶</span>Continue Run</button>
+      <button id="btn-continue-endless" class="gba-save-slot" style="display:none;"><span class="gba-slot-cursor">▶</span>Continue Battle Tower</button>
     </div>
-  </div>
-  <button id="btn-new-run" class="btn-primary">Normal Mode</button>
-  <button id="btn-hard-run" class="btn-primary" style="margin-top:6px;" title="Hardcore mode — any Pokémon that faints in battle is lost permanently. Exception: rival (Silver) battles won't permanently faint your team if you win.">Nuzlocke</button>
-  <button id="btn-endless-run" class="btn-primary" style="margin-top:6px;">Battle Tower</button>
-  <div style="display:flex;gap:8px;margin-top:8px;">
-    <button onclick="openPokedexModal()" class="btn-secondary">📖 Pokédex</button>
-    <button onclick="openAchievementsModal()" class="btn-secondary">🏆 Achievements</button>
-  </div>
-  <div style="display:flex;gap:8px;margin-top:6px;">
-    <button onclick="openHallOfFameModal()" class="btn-secondary">🏛️ Hall of Fame</button>
-    <button onclick="openPatchNotesModal()" class="btn-secondary">📋 Patch Notes</button>
-    <button onclick="openSettingsModal()" class="btn-secondary">⚙️ Settings</button>
-  </div>
-  <div style="display:flex;gap:8px;margin-top:6px;">
-    <button onclick="openRulesModal()" class="btn-secondary">📜 Rules</button>
-  </div>
-  <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:6px;">
-    <button id="btn-cloud-sync" class="btn-secondary">☁ Save Code</button>
-    <div id="cloud-sync-info" style="color:var(--text-dim);font-size:8px;display:none;"></div>
-  </div>
-  <div style="margin-top:14px;max-width:360px;color:var(--text-dim);font-size:8px;opacity:0.65;line-height:1.5;text-align:center;padding:0 10px;">
-    Fork of <a href="https://pokelike.xyz/" target="_blank" rel="noopener" style="color:var(--accent,#f0a830);text-decoration:none;">pokelike.xyz</a>.
-    Fan-made project — not affiliated with, endorsed by, or sponsored by Nintendo, Game Freak, or The Pokémon Company.
-    All Pokémon names and sprites are property of their respective owners.
+
+    <div class="gen-toggle-wrap">
+      <span class="gen-toggle-label">Region</span>
+      <div id="gen-toggle" class="gen-toggle" title="Choose generation">
+        <button class="gen-btn region-card gen-btn--active" data-gen="1" aria-label="Gen 1 (Kanto)">
+          <span class="region-card-art" style="background-image:url('ui/regions/HGSS_Kanto.jpg');"></span>
+          <span class="region-card-plate">KANTO<b>I</b></span>
+        </button>
+        <button class="gen-btn region-card" data-gen="2" aria-label="Gen 2 (Johto)">
+          <span class="region-card-art" style="background-image:url('ui/regions/Johtoart.jpg');"></span>
+          <span class="region-card-plate">JOHTO<b>II</b></span>
+        </button>
+        <button class="gen-btn region-card" data-gen="3" aria-label="Gen 3 (Hoenn)">
+          <span class="region-card-art" style="background-image:url('ui/regions/ORAS_Hoenn_Map.jpg');"></span>
+          <span class="region-card-plate">HOENN<b>III</b></span>
+        </button>
+        <button class="gen-btn region-card" data-gen="both" aria-label="All generations (Kanto + Johto + Hoenn)">
+          <span class="region-card-art region-card-art--stack">
+            <i style="background-image:url('ui/regions/HGSS_Kanto.jpg');"></i>
+            <i style="background-image:url('ui/regions/Johtoart.jpg');"></i>
+            <i style="background-image:url('ui/regions/ORAS_Hoenn_Map.jpg');"></i>
+          </span>
+          <span class="region-card-plate">TOT<b>I+II+III</b></span>
+        </button>
+      </div>
+    </div>
+
+    <nav class="gba-panel gba-menu" aria-label="Game modes">
+      <button id="btn-new-run" class="gba-menu-item">Normal Mode</button>
+      <button id="btn-hard-run" class="gba-menu-item" title="Hardcore mode — any Pokémon that faints in battle is lost permanently. Exception: rival battles won't permanently faint your team if you win.">Nuzlocke</button>
+      <button id="btn-endless-run" class="gba-menu-item">Battle Tower</button>
+    </nav>
+
+    <div class="gba-panel gba-chip-panel">
+      <div class="gba-chip-grid">
+        <button onclick="openPokedexModal()" class="gba-chip">📖 Pokédex</button>
+        <button onclick="openAchievementsModal()" class="gba-chip">🏆 Achievements</button>
+        <button onclick="openHallOfFameModal()" class="gba-chip">🏛️ Hall of Fame</button>
+        <button onclick="openPatchNotesModal()" class="gba-chip">📋 Patch Notes</button>
+        <button onclick="openSettingsModal()" class="gba-chip">⚙️ Settings</button>
+        <button onclick="openRulesModal()" class="gba-chip">📜 Rules</button>
+        <button id="btn-cloud-sync" class="gba-chip">☁ Save Code</button>
+      </div>
+      <div id="cloud-sync-info" style="display:none;"></div>
+
+      <footer class="gba-credits">
+        Fork of <a href="https://pokelike.xyz/" target="_blank" rel="noopener">pokelike.xyz</a>.
+        Fan-made project — not affiliated with, endorsed by, or sponsored by Nintendo, Game Freak, or The Pokémon Company.
+        All Pokémon names and sprites are property of their respective owners.
+      </footer>
+    </div>
+
   </div>
 </div>
 
