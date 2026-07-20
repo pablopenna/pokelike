@@ -2488,7 +2488,7 @@ function runBattleScreen(enemyTeam, isBoss, onWin, onLose, enemyName = null, ene
 
     if (state.isEndlessMode) {
       // ── Auto path (precompute + animate) — keeps Battle Tower traits intact ──
-      const r = runBattle(pTeamCopy, enemyTeam, state.items, enemyItems, null, traitsConfig);
+      const r = await runBattle(pTeamCopy, enemyTeam, state.items, enemyItems, null, traitsConfig);
       playerWon = r.playerWon; resultP = r.pTeam; resultE = r.eTeam; playerParticipants = r.playerParticipants;
 
       skipBtn.disabled = false;
