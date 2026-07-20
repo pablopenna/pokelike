@@ -2321,106 +2321,77 @@ function chooseEnemyAction(active, team, idx, playerActive, switchedLast) {
   }
   return { type: 'attack', move: myMove };
 }
-// Turn order by Speed, with Quick Claw / Lagging Tail overrides (mirrors runBattle).
-function battleTurnOrder(pActive, eActive) {
-  const pItems = pActive.heldItem ? [pActive.heldItem] : [];
-  const eItems = eActive.heldItem ? [eActive.heldItem] : [];
-  const pSpeed = getEffectiveStat(pActive, 'speed', pItems, pActive.stages);
-  const eSpeed = getEffectiveStat(eActive, 'speed', eItems, eActive.stages);
-  const pQuick = pActive.heldItem?.id === 'quick_claw' && rng() < 0.5;
-  const eQuick = eActive.heldItem?.id === 'quick_claw' && rng() < 0.5;
-  const pLag = pActive.heldItem?.id === 'lagging_tail';
-  const eLag = eActive.heldItem?.id === 'lagging_tail';
-  let playerFirst;
-  if (pLag && !eLag) playerFirst = false;
-  else if (eLag && !pLag) playerFirst = true;
-  else if (pQuick && !eQuick) playerFirst = true;
-  else if (eQuick && !pQuick) playerFirst = false;
-  else playerFirst = pSpeed >= eSpeed;
-  return playerFirst ? ['player', 'enemy'] : ['enemy', 'player'];
-}
+// Interactive driver over the shared round-stepper (battle.js). The engine
+// loop, damage, items, statuses and turn order are the SAME code the Battle
+// Tower runs — only the action providers and the animation sink differ here.
+const BATTLE_ABORTED = Symbol('battle-aborted');
 
 async function runInteractiveBattle(pTeamRaw, eTeamRaw, enemyItems, opts = {}) {
-  const pTeam = pTeamRaw.map(p => initBattleState({ ...p }));
-  const eTeam = eTeamRaw.map(p => initBattleState({
-    ...p,
-    currentHp: p.currentHp !== undefined ? p.currentHp : calcHp(p.baseStats.hp, p.level),
-    maxHp:     p.maxHp     !== undefined ? p.maxHp     : calcHp(p.baseStats.hp, p.level),
-  }));
+  const ctx = makeBattleContext(pTeamRaw, eTeamRaw, {});
+  const { pTeam, eTeam } = ctx;
   const hpTrack = { player: pTeam.map(p => p.currentHp), enemy: eTeam.map(p => p.currentHp) };
   const myGen = runGeneration;
   const aborted = () => myGen !== runGeneration;
-  const playerParticipants = new Set();
-  let pIdx = pTeam.findIndex(p => p.currentHp > 0);
-  let eIdx = eTeam.findIndex(p => p.currentHp > 0);
-  if (pIdx < 0 || eIdx < 0) return { playerWon: pIdx >= 0 && eIdx < 0, pTeam, eTeam, playerParticipants };
-  playerParticipants.add(pIdx);
+  const result = playerWonOverride => ({
+    playerWon: playerWonOverride !== undefined ? playerWonOverride : battleOver(ctx) === 'playerWon',
+    pTeam, eTeam, playerParticipants: ctx.playerParticipants,
+  });
 
-  // Loaded Dice: apply start-of-battle stage swings and animate them.
-  const startEvents = [];
-  for (const [team, side] of [[pTeam, 'player'], [eTeam, 'enemy']]) {
-    for (let i = 0; i < team.length; i++) {
-      const d = team[i]._loadedDiceRoll;
-      if (d === undefined) continue;
-      for (const stat of ['atk', 'def', 'speed', 'special', 'spdef']) applyStageChange(team[i], stat, d, side, i, startEvents);
-    }
-  }
+  const startEvents = battleStart(ctx, true);
+  if (ctx.pIdx < 0 || ctx.eIdx < 0) return result(ctx.pIdx >= 0 && ctx.eIdx < 0);
   if (startEvents.length) await animateInteractiveEvents(startEvents, pTeam, eTeam, hpTrack);
+  if (aborted()) return result(false);
 
-  let overtimeMult = 1, rounds = 0, enemySwitchedLast = false;
-  const alive = t => t.some(p => p.currentHp > 0);
+  let enemySwitchedLast = false;
+  const io = {
+    interactive: true,
+    playerAction: async c => {
+      battleSpeedMultiplier = _battleAuto ? SKIP_SPEED : 1;
+      const action = await awaitPlayerAction(pTeam, c.pIdx, eTeam[c.eIdx]);
+      if (aborted()) throw BATTLE_ABORTED;
+      return action;
+    },
+    enemyAction: c => {
+      const action = chooseEnemyAction(eTeam[c.eIdx], eTeam, c.eIdx, pTeam[c.pIdx], enemySwitchedLast);
+      enemySwitchedLast = action.type === 'switch';
+      return action;
+    },
+    // Replacements are handled below, after the round (the player picks via
+    // the party selector; a reset mid-selection must not touch engine state).
+    onFaint: () => {},
+    emit: async events => {
+      if (aborted()) throw BATTLE_ABORTED; // stop mutating/consuming rng mid-round
+      await animateInteractiveEvents(events, pTeam, eTeam, hpTrack);
+    },
+  };
 
-  while (alive(pTeam) && alive(eTeam) && rounds < 300) {
-    rounds++;
-    if (rounds === 101) overtimeMult = 3; // anti-stall overtime
-    battleSpeedMultiplier = _battleAuto ? SKIP_SPEED : 1;
+  try {
+    while (!battleOver(ctx)) {
+      await runBattleRound(ctx, io);
+      if (aborted()) return result(false);
 
-    const pAction = await awaitPlayerAction(pTeam, pIdx, eTeam[eIdx]);
-    if (aborted()) return { playerWon: false, pTeam, eTeam, playerParticipants };
-    const eAction = chooseEnemyAction(eTeam[eIdx], eTeam, eIdx, pTeam[pIdx], enemySwitchedLast);
-    enemySwitchedLast = eAction.type === 'switch';
-
-    // 1) Switches resolve first (priority over attacks). A voluntary player
-    //    switch means only the enemy acts → the incoming Pokémon takes the hit.
-    const swEvents = [];
-    if (pAction.type === 'switch') { pIdx = pAction.idx; playerParticipants.add(pIdx); swEvents.push({ type: 'send_out', side: 'player', idx: pIdx, name: pTeam[pIdx].nickname || pTeam[pIdx].name }); }
-    if (eAction.type === 'switch') { eIdx = eAction.idx; swEvents.push({ type: 'send_out', side: 'enemy', idx: eIdx, name: eTeam[eIdx].name }); }
-    if (swEvents.length) await animateInteractiveEvents(swEvents, pTeam, eTeam, hpTrack);
-
-    // 2) Attacks, ordered by Speed/items.
-    for (const who of battleTurnOrder(pTeam[pIdx], eTeam[eIdx])) {
-      const ev = [];
-      if (who === 'player' && pAction.type === 'attack' && pTeam[pIdx].currentHp > 0 && eTeam[eIdx].currentHp > 0) {
-        resolveOneAttack(pTeam[pIdx], pIdx, 'player', eTeam[eIdx], eIdx, 'enemy', pAction.move, overtimeMult, ev);
-      } else if (who === 'enemy' && eAction.type === 'attack' && eTeam[eIdx].currentHp > 0 && pTeam[pIdx].currentHp > 0) {
-        resolveOneAttack(eTeam[eIdx], eIdx, 'enemy', pTeam[pIdx], pIdx, 'player', eAction.move, overtimeMult, ev);
+      // Replacements after faints.
+      if (eTeam[ctx.eIdx].currentHp <= 0) {
+        const n = eTeam.findIndex(p => p.currentHp > 0);
+        if (n >= 0) {
+          ctx.eIdx = n;
+          await animateInteractiveEvents([{ type: 'send_out', side: 'enemy', idx: n, name: eTeam[n].name }], pTeam, eTeam, hpTrack);
+        }
       }
-      if (ev.length) await animateInteractiveEvents(ev, pTeam, eTeam, hpTrack);
-    }
-
-    // 3) Leftovers heal for the active player Pokémon at end of round.
-    if (pTeam[pIdx].currentHp > 0 && pTeam[pIdx].heldItem?.id === 'leftovers') {
-      const heal = Math.min(Math.max(1, Math.floor(pTeam[pIdx].maxHp * 0.10)), pTeam[pIdx].maxHp - pTeam[pIdx].currentHp);
-      if (heal > 0) {
-        pTeam[pIdx].currentHp += heal;
-        await animateInteractiveEvents([{ type: 'effect', side: 'player', idx: pIdx, name: pTeam[pIdx].nickname || pTeam[pIdx].name, hpChange: heal, hpAfter: pTeam[pIdx].currentHp, reason: 'Leftovers' }], pTeam, eTeam, hpTrack);
+      if (pTeam[ctx.pIdx].currentHp <= 0 && pTeam.some(p => p.currentHp > 0)) {
+        const nextIdx = _battleAuto ? pTeam.findIndex(p => p.currentHp > 0) : await openPartySelector(pTeam, ctx.pIdx, true);
+        if (aborted()) return result(false);
+        ctx.pIdx = nextIdx;
+        ctx.playerParticipants.add(nextIdx);
+        await animateInteractiveEvents([{ type: 'send_out', side: 'player', idx: nextIdx, name: pTeam[nextIdx].nickname || pTeam[nextIdx].name }], pTeam, eTeam, hpTrack);
       }
     }
-
-    // 4) Replacements after faints.
-    if (eTeam[eIdx].currentHp <= 0) {
-      const n = eTeam.findIndex(p => p.currentHp > 0);
-      if (n >= 0) { eIdx = n; await animateInteractiveEvents([{ type: 'send_out', side: 'enemy', idx: eIdx, name: eTeam[eIdx].name }], pTeam, eTeam, hpTrack); }
-    }
-    if (pTeam[pIdx].currentHp <= 0 && alive(pTeam)) {
-      const nextIdx = _battleAuto ? pTeam.findIndex(p => p.currentHp > 0) : await openPartySelector(pTeam, pIdx, true);
-      if (aborted()) return { playerWon: false, pTeam, eTeam, playerParticipants };
-      pIdx = nextIdx; playerParticipants.add(pIdx);
-      await animateInteractiveEvents([{ type: 'send_out', side: 'player', idx: pIdx, name: pTeam[pIdx].nickname || pTeam[pIdx].name }], pTeam, eTeam, hpTrack);
-    }
+  } catch (e) {
+    if (e === BATTLE_ABORTED) return result(false);
+    throw e;
   }
 
-  return { playerWon: alive(pTeam) && !alive(eTeam), pTeam, eTeam, playerParticipants };
+  return result();
 }
 
 // Anti over-level: cap the team at the current map's boss level so XP keeps
@@ -2518,6 +2489,7 @@ function runBattleScreen(enemyTeam, isBoss, onWin, onLose, enemyName = null, ene
       const res = await runInteractiveBattle(pTeamCopy, eTeamInit, enemyItems, { isBoss, enemyName });
       document.getElementById('battle-command').style.display = 'none';
       document.getElementById('battle-party-select').style.display = 'none';
+      document.getElementById('overtime-banner')?.remove();
       if (battleAborted()) return;
       playerWon = res.playerWon; resultP = res.pTeam; resultE = res.eTeam; playerParticipants = res.playerParticipants;
     }

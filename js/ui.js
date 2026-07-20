@@ -2756,6 +2756,68 @@ async function animateInteractiveEvents(events, pTeam, eTeam, hpTrack) {
       if (el) { el.classList.add('fainted'); el.classList.remove('active-pokemon'); if (typeof spawnBloodPool === 'function') spawnBloodPool(el); }
       if (typeof battleShake === 'function') battleShake('brutal');
       await sleep(420);
+
+    } else if (ev.type === 'status_apply') {
+      const el = elFor(ev.side, ev.idx);
+      if (el) {
+        const icon  = ev.status === 'poison' ? '☠' : '❄';
+        const color = ev.status === 'poison' ? '#a040a0' : '#7ecff0';
+        showStatusBadge(el, icon, color, ev.status);
+      }
+      await sleep(200);
+
+    } else if (ev.type === 'status_tick') {
+      const el = elFor(ev.side, ev.idx);
+      const track = hpTrack[ev.side];
+      if (ev.status === 'poison' && el) {
+        el.classList.add('hit-poison');
+        await animateHpBar(el, track[ev.idx], ev.hpAfter, maxFor(ev.side, ev.idx));
+        track[ev.idx] = ev.hpAfter;
+        el.classList.remove('hit-poison');
+      } else if (ev.status === 'freeze_thaw' && el) {
+        removeStatusBadge(el, 'freeze');
+        const popup = document.createElement('div');
+        popup.className = 'crit-popup';
+        popup.textContent = 'Thawed!';
+        el.appendChild(popup);
+        setTimeout(() => popup.remove(), 800);
+      } else if (ev.status === 'freeze_skip' && el) {
+        el.classList.add('frozen-flash');
+        await sleep(300);
+        el.classList.remove('frozen-flash');
+      } else if (ev.status === 'flinch' && el) {
+        const popup = document.createElement('div');
+        popup.className = 'crit-popup';
+        popup.textContent = 'Flinched!';
+        el.appendChild(popup);
+        setTimeout(() => popup.remove(), 800);
+        await sleep(250);
+      }
+      await sleep(100);
+
+    } else if (ev.type === 'transform') {
+      const el = elFor(ev.side, ev.idx);
+      if (el) {
+        el.classList.add('hit-normal');
+        await sleep(200);
+        const imgEl = el.querySelector('.battle-sprite');
+        if (imgEl && ev.spriteUrl) imgEl.src = ev.spriteUrl;
+        const nameEl = el.querySelector('.battle-poke-name');
+        const p = (ev.side === 'player' ? pTeam : eTeam)[ev.idx];
+        if (nameEl && p) nameEl.textContent = `${ev.name} Lv${p.level}`;
+        el.classList.remove('hit-normal');
+      }
+      await sleep(400);
+
+    } else if (ev.type === 'overtime_start') {
+      if (!document.getElementById('overtime-banner')) {
+        const banner = document.createElement('div');
+        banner.id = 'overtime-banner';
+        banner.className = 'overtime-banner';
+        banner.textContent = '⚡ OVERTIME — 3× Damage!';
+        document.getElementById('battle-screen')?.prepend(banner);
+      }
+      await sleep(800);
     }
   }
 }
