@@ -948,7 +948,26 @@ h1, h2, .pixel-font {
 }
 .battle-sprite { width: 118px; height: 118px; image-rendering: pixelated; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); z-index: 3; }
 #player-side .battle-sprite { transform: translateX(-50%) scaleX(-1); }
-.battle-poke-name { font-size: 7px; font-family: 'Press Start 2P', monospace; color: #fff; -webkit-text-stroke: 2px #000; paint-order: stroke fill; margin-bottom: 8px; }
+/* Name plate: a chip stacked ABOVE the sprite (z 3) — tall sprites were
+   covering the in-flow name/level text on short cards. */
+.battle-poke-name {
+  position: relative;
+  z-index: 6;
+  font-size: 7px;
+  font-family: 'Press Start 2P', monospace;
+  color: #fff;
+  background: rgba(12, 10, 6, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  padding: 3px 9px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The HP block joins the name above the sprite so bars never get hidden. */
+.battle-pokemon .poke-hp { position: relative; z-index: 6; }
 .battle-stages { position: absolute; bottom: 4px; left: 4px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; z-index: 4; }
 .battle-stage-badge { font-family: 'Press Start 2P', monospace; font-size: 5px; padding: 1px 3px; border-radius: 2px; box-shadow: 1px 1px 0 0 #000; }
 .stage-up   { background: #1a3a1a; color: #5af055; border: 1px solid #5af055; }
