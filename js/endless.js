@@ -31,7 +31,7 @@ const TRAIT_DESCRIPTIONS = {
   Poison:  ['33% chance to poison on hit',                '66% chance to poison on hit',                '100% chance to poison on hit'],
   Psychic: ['10% of damage splashes to all enemies',      '20% of damage splashes to all enemies',      '30% of damage splashes to all enemies'],
   Rock:    ['33% chance: +1 DEF & Sp.DEF after attack',   '66% chance: +2 DEF & Sp.DEF after attack',   '100% chance: +3 DEF & Sp.DEF after attack'],
-  Steel:   ['Reduce incoming damage by 15%',              'Reduce incoming damage by 30%',              'Reduce incoming damage by 45%',              'Reduce incoming damage by 60%',              'Reduce incoming damage by 75%'],
+  Steel:   ['Reduce incoming damage by 10% (super-effective hits pierce half)', 'Reduce incoming damage by 20% (super-effective hits pierce half)', 'Reduce incoming damage by 30% (super-effective hits pierce half)', 'Reduce incoming damage by 40% (super-effective hits pierce half)', 'Reduce incoming damage by 50% (super-effective hits pierce half)'],
   Water:   ['33% chance: Enemy -1 Spd/ATK/SpATK on hit', '66% chance: Enemy -2 Spd/ATK/SpATK on hit', '100% chance: Enemy -3 Spd/ATK/SpATK on hit'],
 };
 
@@ -685,11 +685,18 @@ function buildTraitsConfig(playerTiers, enemyTiers = {}) {
       }
     },
 
-    beforeDamage(defender, dIdx, dSide, attacker, aIdx, aSide, damage, log) {
+    beforeDamage(defender, dIdx, dSide, attacker, aIdx, aSide, damage, log, typeEff = 1) {
       // Steel: reduce damage before it's applied
       if (activeFor('Steel', dSide) && damage > 0) {
         const tier = tierFor('Steel', dSide);
-        const reduction = Math.floor(damage * sf([0, 0.15, 0.30, 0.45, 0.60, 0.75][tier]));
+        // Softer ladder than the original 15–75%: stacked multiplicatively with
+        // Steel's 12 type resistances, −75% made T5 teams statistically
+        // unbeatable (0/20 seeded sims with a balanced attacker team).
+        let pct = sf([0, 0.10, 0.20, 0.30, 0.40, 0.50][tier]);
+        // Counterplay: super-effective hits (Fire/Fighting/Ground) pierce the
+        // guard — only half the reduction applies.
+        if (typeEff >= 2) pct *= 0.5;
+        const reduction = Math.floor(damage * pct);
         if (reduction > 0) {
           log.push({ type: 'trait_trigger', traitType: 'Steel', side: dSide, idx: dIdx,
             name: defender.nickname || defender.name, description: `Steel Trait T${tier}: −${reduction} damage!` });

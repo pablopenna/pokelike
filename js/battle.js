@@ -328,7 +328,7 @@ function executeTurn(ctx, io, turn, action, roundState) {
 
   const { damage: rawDamage, typeEff, moveType, crit } = calcDamage(attacker, target, move, attackerItems, defenderItems);
   const damage = ctx.overtimeMult * (traitsConfig?.beforeDamage
-    ? traitsConfig.beforeDamage(target, tIdx, tSide, attacker, aIdx, side, rawDamage, detailedLog)
+    ? traitsConfig.beforeDamage(target, tIdx, tSide, attacker, aIdx, side, rawDamage, detailedLog, typeEff)
     : rawDamage);
 
   const targetPreHp = target.currentHp;
