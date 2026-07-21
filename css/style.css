@@ -948,10 +948,14 @@ h1, h2, .pixel-font {
 }
 .battle-sprite { width: 118px; height: 118px; image-rendering: pixelated; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); z-index: 3; }
 #player-side .battle-sprite { transform: translateX(-50%) scaleX(-1); }
-/* Name plate: a chip stacked ABOVE the sprite (z 3) — tall sprites were
-   covering the in-flow name/level text on short cards. */
+/* Info anchored to the BOTTOM of the card, stacked above the sprite (z 3):
+   name plate chip just over the HP block, HP block along the lower edge.
+   Chip backgrounds keep both readable over the base/sprite feet. */
 .battle-poke-name {
-  position: relative;
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 6;
   font-size: 7px;
   font-family: 'Press Start 2P', monospace;
@@ -960,15 +964,26 @@ h1, h2, .pixel-font {
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 999px;
   padding: 3px 9px;
-  margin-bottom: 4px;
+  margin: 0;
   white-space: nowrap;
-  max-width: 100%;
+  max-width: calc(100% - 8px);
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* The HP block joins the name above the sprite so bars never get hidden. */
-.battle-pokemon .poke-hp { position: relative; z-index: 6; }
-.battle-stages { position: absolute; bottom: 4px; left: 4px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; z-index: 4; }
+.battle-pokemon .poke-hp {
+  position: absolute;
+  bottom: 4px;
+  left: 6px;
+  right: 6px;
+  width: auto;
+  z-index: 6;
+  margin: 0;
+  background: rgba(12, 10, 6, 0.55);
+  border-radius: 8px;
+  padding: 3px 5px;
+}
+/* Stat-stage badges move to the top-left — the bottom now belongs to name/HP. */
+.battle-stages { position: absolute; top: 4px; left: 4px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; z-index: 4; }
 .battle-stage-badge { font-family: 'Press Start 2P', monospace; font-size: 5px; padding: 1px 3px; border-radius: 2px; box-shadow: 1px 1px 0 0 #000; }
 .stage-up   { background: #1a3a1a; color: #5af055; border: 1px solid #5af055; }
 .stage-down { background: #3a1a1a; color: #f05545; border: 1px solid #f05545; }
