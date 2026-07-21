@@ -4000,3 +4000,58 @@ body.dark-mode .region-card { filter: brightness(0.93); }
 @media (max-width: 640px) {
   #battle-msg-box { bottom: 150px; font-size: 9px; }
 }
+
+/* ===== Held-item badges on battle cards + touch-docked tooltips ===== */
+
+.battle-held-item {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: var(--gba-cream);
+  border: 1px solid var(--gba-frame);
+  border-radius: 50%;
+  box-shadow: 0 1px 0 1px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  z-index: 5;
+  font-size: 11px;
+  line-height: 1;
+}
+.battle-pokemon.fainted .battle-held-item { opacity: 0.45; }
+@media (hover: hover) {
+  .battle-held-item:hover { transform: scale(1.15); }
+}
+
+/* Touch devices: tooltips dock as a bottom sheet instead of floating at the
+   finger position (they'd be hidden under it). Styled like the GBA dialog. */
+#map-node-tooltip.docked,
+#item-tooltip.docked,
+#trait-tooltip.docked {
+  position: fixed !important;
+  left: 12px !important;
+  right: 12px !important;
+  top: auto !important;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+  transform: none !important;
+  max-width: none !important;
+  width: auto !important;
+  pointer-events: auto !important;
+  background: linear-gradient(180deg, #fdf7e4, var(--gba-cream) 60%, var(--gba-cream-deep)) !important;
+  color: var(--gba-ink) !important;
+  border: 2px solid var(--gba-frame) !important;
+  border-radius: 7px !important;
+  box-shadow: 0 0 0 2px var(--gba-frame-light), 0 4px 0 2px rgba(0, 0, 0, 0.45) !important;
+  font-size: 9px !important;
+  line-height: 1.9 !important;
+  padding: 12px 14px !important;
+  z-index: 450 !important;
+}
+#map-node-tooltip.docked div { color: var(--gba-ink) !important; }
+#map-node-tooltip.docked div[style*="color:#ffd76b"] { color: #8a6410 !important; }
+#map-node-tooltip.docked div[style*="color:#7ecf7e"] { color: #2e7a3e !important; }
+#map-node-tooltip.docked span { color: var(--gba-ink-dim) !important; }

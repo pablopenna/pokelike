@@ -444,18 +444,27 @@ function getNodeSprite(node) {
 // Rendering — top-to-bottom layout
 const _mapTooltip = (() => {
   let el = null;
+  // On touch devices the tooltip would sit under the finger — dock it as a
+  // bottom sheet instead (isTouchUI lives in ui.js; loaded by runtime).
+  const touch = () => typeof isTouchUI === 'function' && isTouchUI();
   return {
     show(label, x, y) {
       if (!document.getElementById('map-screen')?.classList.contains('active')) return;
       if (!el) el = document.getElementById('map-node-tooltip');
       if (!el) return;
       el.innerHTML = label;
-      el.style.left = x + 'px';
-      el.style.top = y + 'px';
+      if (touch()) {
+        el.classList.add('docked');
+        el.style.left = ''; el.style.top = '';
+      } else {
+        el.classList.remove('docked');
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+      }
       el.classList.add('visible');
     },
     move(x, y) {
-      if (!el) return;
+      if (!el || el.classList.contains('docked')) return;
       el.style.left = x + 'px';
       el.style.top = y + 'px';
     },
@@ -465,6 +474,11 @@ const _mapTooltip = (() => {
     },
   };
 })();
+
+// Touch: tapping outside a map node closes the docked node sheet.
+document.addEventListener('click', e => {
+  if (!e.target.closest('#map-container svg g')) _mapTooltip.hide();
+});
 
 function renderMap(map, container, onNodeClick) {
   container.innerHTML = '';

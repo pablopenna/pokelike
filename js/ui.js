@@ -9,11 +9,28 @@ let _hoverEnabled = true;
 document.addEventListener('mousemove',   () => { _hoverEnabled = true; }, { capture: true, passive: true });
 document.addEventListener('touchstart',  () => { _hoverEnabled = true; }, { capture: true, passive: true });
 
+// Touch devices (no hover): tooltips positioned at the pointer end up hidden
+// under the finger. Dock them as a bottom sheet instead (.docked in CSS).
+function isTouchUI() {
+  return window.matchMedia('(hover: none)').matches;
+}
+
 const _itemTooltip = (() => {
   let el = null;
   const get = () => el || (el = document.getElementById('item-tooltip'));
   return {
-    show(text, x, y) { const t = get(); if (!t) return; t.textContent = text; t.style.left = x + 'px'; t.style.top = y + 'px'; t.classList.add('visible'); },
+    show(text, x, y) {
+      const t = get(); if (!t) return;
+      t.textContent = text;
+      if (isTouchUI()) {
+        t.classList.add('docked');
+        t.style.left = ''; t.style.top = '';
+      } else {
+        t.classList.remove('docked');
+        t.style.left = x + 'px'; t.style.top = y + 'px';
+      }
+      t.classList.add('visible');
+    },
     hide() { const t = get(); if (t) t.classList.remove('visible'); },
   };
 })();
@@ -28,6 +45,12 @@ const _traitTooltip = (() => {
       if (!t) return;
       t.textContent = desc;
       t.classList.add('visible');
+      if (isTouchUI()) {
+        t.classList.add('docked');
+        t.style.left = ''; t.style.top = '';
+        return;
+      }
+      t.classList.remove('docked');
       // Position below the tapped trait, clamped so it stays on screen
       const left = Math.max(8, Math.min(anchorRect.left, window.innerWidth - 210));
       t.style.left = left + 'px';
@@ -36,6 +59,22 @@ const _traitTooltip = (() => {
     hide() { const t = get(); if (t) t.classList.remove('visible'); },
   };
 })();
+
+// Held-item badge on battle cards: tap/click shows the item's name + effect.
+document.addEventListener('click', e => {
+  const badge = e.target.closest('.battle-held-item');
+  if (badge) {
+    e.stopPropagation();
+    const text = badge.dataset.itemDesc
+      ? `${badge.dataset.itemName} — ${badge.dataset.itemDesc}`
+      : badge.dataset.itemName;
+    _itemTooltip.show(text, e.clientX + 14, e.clientY - 8);
+    return;
+  }
+  // Tapping anywhere else dismisses the item tooltip (mainly for the docked
+  // touch variant — on desktop mouseleave handlers already hide it).
+  _itemTooltip.hide();
+});
 
 document.addEventListener('mouseover', e => {
   if (!_hoverEnabled || !state?.isEndlessMode) return;
@@ -408,6 +447,14 @@ function renderItemBadges(items, el, afterUse = null) {
 
 
 // Render battlefield — first alive pokemon on each side starts as active
+// Small held-item badge shown on the battle card. Tap/click opens the item
+// tooltip (docked to the bottom on touch devices).
+function battleHeldItemHtml(p) {
+  if (!p.heldItem) return '';
+  const desc = (p.heldItem.desc || '').replace(/"/g, '&quot;');
+  return `<button class="battle-held-item" data-item-name="${p.heldItem.name}" data-item-desc="${desc}" title="${p.heldItem.name}" aria-label="Held item: ${p.heldItem.name}">${itemIconHtml(p.heldItem, 14)}</button>`;
+}
+
 function renderBattleField(pTeam, eTeam) {
   const pEl = document.getElementById('player-side');
   const eEl = document.getElementById('enemy-side');
@@ -425,6 +472,7 @@ function renderBattleField(pTeam, eTeam) {
         <img src="ui/battleBase.png" class="battle-base" alt="">
         <img src="${p.spriteUrl||''}" alt="${p.name}" class="battle-sprite" onerror="this.src=''">
         <div class="battle-stages"></div>
+        ${battleHeldItemHtml(p)}
       </div>`;
     }).join('');
   }
@@ -438,6 +486,7 @@ function renderBattleField(pTeam, eTeam) {
         <img src="ui/battleBase.png" class="battle-base" alt="">
         <img src="${p.spriteUrl||''}" alt="${p.name}" class="battle-sprite" onerror="this.src=''">
         <div class="battle-stages"></div>
+        ${battleHeldItemHtml(p)}
       </div>`;
     }).join('');
   }
