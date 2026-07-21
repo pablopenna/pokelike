@@ -35,7 +35,10 @@ const POKELIKE_RULES = {
   },
 
   modes: {
-    normal: "Normal Mode — fainted Pokémon are revived after each battle. Turn-based interactive battles.",
+    normal:
+      "Normal Mode — turn-based interactive battles. Fainted Pokémon still earn XP and are revived when " +
+      "you reach the next map; mid-map you can heal them at a Pokémon Center, with a Max Revive, or by " +
+      "winning a rival battle.",
     nuzlocke:
       "Nuzlocke — hardcore. Any Pokémon that faints in battle is lost permanently (exception: rival/Silver " +
       "battles don't permanently faint your team if you win). Trade nodes are available.",
@@ -77,7 +80,8 @@ const POKELIKE_RULES = {
     auto: "An Auto button lets the AI play your turns.",
     xp_rewards: { wild: 1, trainer: 2, gym: 3 },
     xp_note:
-      "The whole alive team shares XP. A dynamic per-map level cap prevents over-leveling so bosses stay a threat.",
+      "The WHOLE team shares XP — fainted Pokémon included, so nobody falls behind. A dynamic per-map " +
+      "level cap prevents over-leveling so bosses stay a threat.",
   },
 
   bosses: {

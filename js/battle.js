@@ -622,8 +622,10 @@ function applyLevelGain(team, bagItems, participantIdxs, maxEnemyLevel = 0, hard
 
   for (let i = 0; i < team.length; i++) {
     const p = team[i];
-    const getsXp = p.currentHp > 0 || (participantIdxs && participantIdxs.has(i));
-    if (!getsXp) continue;
+    // Every team member shares battle XP — fainted ones included. Gating XP
+    // on being alive/participating created a death spiral: a Pokémon down
+    // early fell further behind every battle until it was too under-leveled
+    // to ever field again.
 
     const luckyBonus = p.heldItem?.id === 'lucky_egg' && rng() < 0.30 ? 1 : 0;
     const gain = baseGain + luckyBonus;
