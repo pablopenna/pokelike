@@ -470,7 +470,7 @@ const _mapTooltip = (() => {
     },
     hide() {
       if (!el) el = document.getElementById('map-node-tooltip');
-      if (el) el.classList.remove('visible');
+      if (el) el.classList.remove('visible', 'docked');
     },
   };
 })();

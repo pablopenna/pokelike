@@ -31,7 +31,7 @@ const _itemTooltip = (() => {
       }
       t.classList.add('visible');
     },
-    hide() { const t = get(); if (t) t.classList.remove('visible'); },
+    hide() { const t = get(); if (t) t.classList.remove('visible', 'docked'); },
   };
 })();
 
@@ -56,7 +56,7 @@ const _traitTooltip = (() => {
       t.style.left = left + 'px';
       t.style.top = (anchorRect.bottom + 6) + 'px';
     },
-    hide() { const t = get(); if (t) t.classList.remove('visible'); },
+    hide() { const t = get(); if (t) t.classList.remove('visible', 'docked'); },
   };
 })();
 

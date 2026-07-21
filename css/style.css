@@ -4040,7 +4040,9 @@ body.dark-mode .region-card { filter: brightness(0.93); }
   transform: none !important;
   max-width: none !important;
   width: auto !important;
-  pointer-events: auto !important;
+  /* Only intercept taps while actually visible — an invisible docked sheet
+     was blocking the battle Switch/Auto buttons underneath it. */
+  pointer-events: none !important;
   background: linear-gradient(180deg, #fdf7e4, var(--gba-cream) 60%, var(--gba-cream-deep)) !important;
   color: var(--gba-ink) !important;
   border: 2px solid var(--gba-frame) !important;
@@ -4129,3 +4131,8 @@ body.dark-mode .region-card { filter: brightness(0.93); }
     0% { opacity: 0; } 10% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; }
   }
 }
+
+/* Docked tooltips take taps only while shown (tap-to-dismiss) */
+#map-node-tooltip.docked.visible,
+#item-tooltip.docked.visible,
+#trait-tooltip.docked.visible { pointer-events: auto !important; }
