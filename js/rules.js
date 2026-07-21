@@ -70,6 +70,10 @@ const POKELIKE_RULES = {
     switching:
       "You may switch your active Pokémon; switching uses your turn and the enemy gets a free hit.",
     turn_order: "Faster Pokémon acts first; held items can modify stats/priority.",
+    immunities:
+      "Type immunities (×0) are real: an immune move deals no damage ('No effect!'; the move buttons " +
+      "show a ×0 tag). The AI picks its strongest move that affects the target; a Pokémon with NO move " +
+      "that affects the target resorts to typeless Struggle (50 power) so auto battles can't deadlock.",
     auto: "An Auto button lets the AI play your turns.",
     xp_rewards: { wild: 1, trainer: 2, gym: 3 },
     xp_note:

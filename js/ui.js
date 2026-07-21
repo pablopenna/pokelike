@@ -2735,6 +2735,15 @@ async function animateInteractiveEvents(events, pTeam, eTeam, hpTrack) {
         await sleep(260);
         targetEl.classList.remove(hitClass, 'crit-flash');
       } else if (targetEl) {
+        // Immune hit (×0): the attack failed — say so.
+        if (ev.typeEff === 0) {
+          const popup = document.createElement('div');
+          popup.className = 'crit-popup';
+          popup.textContent = 'No effect!';
+          targetEl.appendChild(popup);
+          setTimeout(() => popup.remove(), 800);
+          await sleep(300);
+        }
         await sleep(160);
       }
       // The attacker's own HP can change (Life Orb) — handled by following 'effect' events.
@@ -2832,9 +2841,15 @@ function awaitPlayerAction(pTeam, pIdx, enemyActive) {
     const moves = getMovesForPokemon(pTeam[pIdx]);
     moveWrap.innerHTML = moves.map((m, i) => {
       const rgb = (typeof TYPE_COLORS_RGB !== 'undefined' && TYPE_COLORS_RGB[m.type.toLowerCase()]) || '120,120,120';
-      return `<button class="move-btn" data-mi="${i}" style="--mc:${rgb};">
+      // Effectiveness hint vs the current enemy — ×0 warns that the move fails.
+      const eff = m.noDamage ? null : getTypeEffectiveness(m.type, enemyActive.types || ['Normal']);
+      const effTag = eff === null || eff === 1 ? ''
+        : eff === 0 ? '<span class="move-eff move-eff--none">×0</span>'
+        : eff > 1   ? `<span class="move-eff move-eff--se">×${eff}</span>`
+        :             `<span class="move-eff move-eff--nve">×${eff === 0.25 ? '¼' : '½'}</span>`;
+      return `<button class="move-btn${eff === 0 ? ' move-btn--immune' : ''}" data-mi="${i}" style="--mc:${rgb};">
         <span class="move-name">${m.name}</span>
-        <span class="move-meta"><span class="move-type-pill" style="background:rgb(${rgb});">${m.type}</span>${m.noDamage ? '' : `<span class="move-pow">⚔ ${m.power}</span>`}</span>
+        <span class="move-meta"><span class="move-type-pill" style="background:rgb(${rgb});">${m.type}</span>${m.noDamage ? '' : `<span class="move-pow">⚔ ${m.power}</span>`}${effTag}</span>
       </button>`;
     }).join('');
     const aliveBench = pTeam.filter((p, i) => i !== pIdx && p.currentHp > 0).length;
@@ -2843,7 +2858,7 @@ function awaitPlayerAction(pTeam, pIdx, enemyActive) {
     cmd.style.display = 'flex';
 
     const cleanup = () => { cmd.style.display = 'none'; };
-    moveWrap.querySelectorAll('.move-btn').forEach(b => b.onclick = () => { cleanup(); resolve({ type: 'attack', move: moves[+b.dataset.mi] }); });
+    moveWrap.querySelectorAll('.move-btn').forEach(b => b.onclick = () => { cleanup(); resolve({ type: 'attack', move: moves[+b.dataset.mi], manual: true }); });
     switchBtn.onclick = async () => {
       if (aliveBench === 0) return;
       const idx = await openPartySelector(pTeam, pIdx, false);

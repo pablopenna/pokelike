@@ -299,9 +299,16 @@ function executeTurn(ctx, io, turn, action, roundState) {
   if (bothUseless) {
     move = STRUGGLE();
   }
-  // If the attacker's move has no effect on the target, use Struggle (typeless)
-  if (!move.noDamage && getTypeEffectiveness(move.type, target.types || ['Normal']) === 0) {
-    move = STRUGGLE();
+  // Immunity (×0): a manually-chosen move is respected and simply fails
+  // ("No effect!" — the move buttons warn beforehand). An AI/auto-chosen move
+  // falls back to the attacker's strongest move that DOES affect the target,
+  // and only resorts to typeless Struggle when nothing does — the escape
+  // hatch that keeps auto battles (Battle Tower) from deadlocking.
+  if (!move.noDamage && !action.manual && getTypeEffectiveness(move.type, target.types || ['Normal']) === 0) {
+    const alt = getMovesForPokemon(attacker)
+      .filter(m => !m.noDamage && getTypeEffectiveness(m.type, target.types || ['Normal']) > 0)
+      .sort((a, b) => (b.power || 0) - (a.power || 0))[0];
+    move = alt || STRUGGLE();
   }
   const attackerItems = side === 'player' ? pActiveItems : eActiveItems;
   const defenderItems = side === 'player' ? eActiveItems : pActiveItems;
@@ -332,8 +339,9 @@ function executeTurn(ctx, io, turn, action, roundState) {
     target.currentHp = 1;
   }
 
-  // King's Rock: 30% chance to flinch the target on a hit (only if target is still alive)
-  if (target.currentHp > 0 && hasItem(attackerItems, 'kings_rock') && rng() < 0.3) {
+  // King's Rock: 30% chance to flinch the target on a hit (only if target is
+  // still alive; a failed immune attack — damage 0 — triggers nothing)
+  if (damage > 0 && target.currentHp > 0 && hasItem(attackerItems, 'kings_rock') && rng() < 0.3) {
     target.flinch = true;
   }
 
@@ -377,8 +385,8 @@ function executeTurn(ctx, io, turn, action, roundState) {
     traitsConfig.afterAttack(attacker, aIdx, side, target, tIdx, tSide, actualDamage, detailedLog, pTeam, eTeam);
   }
 
-  // Life Orb recoil
-  if (side === 'player' && attacker.heldItem?.id === 'life_orb') {
+  // Life Orb recoil (no recoil when the attack failed on an immunity)
+  if (damage > 0 && side === 'player' && attacker.heldItem?.id === 'life_orb') {
     const recoil = Math.max(1, Math.floor(attacker.maxHp * 0.1));
     attacker.currentHp = Math.max(0, attacker.currentHp - recoil);
     addLog(`${aName} lost ${recoil} HP from Life Orb!`, 'log-item');
@@ -386,8 +394,8 @@ function executeTurn(ctx, io, turn, action, roundState) {
       hpChange: -recoil, hpAfter: attacker.currentHp, reason: `${aName} lost ${recoil} HP from Life Orb!` });
   }
 
-  // Rocky Helmet
-  if (target.heldItem?.id === 'rocky_helmet') {
+  // Rocky Helmet (only when the hit actually landed)
+  if (damage > 0 && target.heldItem?.id === 'rocky_helmet') {
     const helmet = Math.max(1, Math.floor(attacker.maxHp * 0.12));
     attacker.currentHp = Math.max(0, attacker.currentHp - helmet);
     addLog(`Rocky Helmet hurt ${aName} for ${helmet} HP!`, 'log-item');
@@ -395,8 +403,8 @@ function executeTurn(ctx, io, turn, action, roundState) {
       hpChange: -helmet, hpAfter: attacker.currentHp, reason: `Rocky Helmet hurt ${aName} for ${helmet} HP!` });
   }
 
-  // Shell Bell
-  if (side === 'player' && attacker.heldItem?.id === 'shell_bell') {
+  // Shell Bell (nothing to siphon from a failed attack)
+  if (damage > 0 && side === 'player' && attacker.heldItem?.id === 'shell_bell') {
     const heal   = Math.max(1, Math.floor(damage * 0.15));
     const actual = Math.min(heal, attacker.maxHp - attacker.currentHp);
     if (actual > 0) {

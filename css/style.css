@@ -3799,6 +3799,17 @@ body.dark-mode .btn-primary:disabled { box-shadow: 3px 3px 0 0 #000; }
 .move-meta { display: flex; align-items: center; gap: 8px; }
 .move-type-pill { font-family: 'Press Start 2P', monospace; font-size: 7px; color: #fff; padding: 2px 7px; border-radius: 999px; text-shadow: 0 1px 1px rgba(0,0,0,.5); }
 .move-pow { font-size: 12px; font-weight: bold; opacity: .95; }
+/* Effectiveness hint vs the current enemy (×2 / ×½ / ×0) */
+.move-eff {
+  font-family: 'Press Start 2P', monospace; font-size: 8px;
+  padding: 2px 6px; border-radius: 999px; color: #fff;
+  text-shadow: 0 1px 1px rgba(0,0,0,.45);
+}
+.move-eff--se   { background: rgba(35, 140, 70, 0.92); }
+.move-eff--nve  { background: rgba(190, 120, 20, 0.92); }
+.move-eff--none { background: rgba(30, 30, 34, 0.85); }
+.move-btn--immune { filter: saturate(0.35) brightness(0.8); }
+@media (hover: hover) { .move-btn--immune:hover { filter: saturate(0.5) brightness(0.9); } }
 .battle-command-actions { display: flex; gap: 10px; justify-content: center; }
 .battle-command-actions .btn-primary,
 .battle-command-actions .btn-secondary { font-size: 10px; padding: 10px 18px; }
