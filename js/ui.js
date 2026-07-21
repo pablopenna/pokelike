@@ -2724,10 +2724,16 @@ async function animateInteractiveEvents(events, pTeam, eTeam, hpTrack) {
         targetEl.classList.add(hitClass);
         if (typeof spawnImpactFX === 'function') spawnImpactFX(targetEl, { crit: ev.crit, superEff: ev.typeEff >= 2, damage: ev.damage });
         if (typeof battleShake === 'function') battleShake(ev.crit ? 'brutal' : ev.typeEff >= 2 ? 'heavy' : 'light');
-        if (ev.crit) {
-          targetEl.classList.add('crit-flash');
-          const popup = document.createElement('div'); popup.className = 'crit-popup'; popup.textContent = 'Critical!';
-          targetEl.appendChild(popup); setTimeout(() => popup.remove(), 800);
+        // Hit label: crit and/or effectiveness. Plain neutral hits show nothing.
+        const effLabel = ev.typeEff >= 2 ? 'Super effective!'
+          : (ev.typeEff > 0 && ev.typeEff < 1) ? 'Not very effective…' : '';
+        const hitLabel = ev.crit ? ('Critical!' + (effLabel ? ' ' + effLabel : '')) : effLabel;
+        if (ev.crit) targetEl.classList.add('crit-flash');
+        if (hitLabel) {
+          const popup = document.createElement('div');
+          popup.className = 'crit-popup' + (ev.crit ? '' : ev.typeEff >= 2 ? ' eff-popup--se' : ' eff-popup--nve');
+          popup.textContent = hitLabel;
+          targetEl.appendChild(popup); setTimeout(() => popup.remove(), 900);
         }
         const track = hpTrack[ev.targetSide];
         await animateHpBar(targetEl, track[ev.targetIdx], ev.targetHpAfter, maxFor(ev.targetSide, ev.targetIdx));
@@ -3080,13 +3086,19 @@ async function animateBattleVisually(detailedLog, pTeamInit, eTeamInit) {
         if (event.crit) battleShake('brutal');
         else if (event.typeEff >= 2) battleShake('heavy');
         else if (event.damage > 0) battleShake('light');
-        if (event.crit && targetEl) {
-          targetEl.classList.add('crit-flash');
-          const popup = document.createElement('div');
-          popup.className = 'crit-popup';
-          popup.textContent = 'Critical!';
-          targetEl.appendChild(popup);
-          setTimeout(() => popup.remove(), 800);
+        if (event.crit && targetEl) targetEl.classList.add('crit-flash');
+        // Hit label: crit and/or effectiveness. Plain neutral hits show nothing.
+        if (targetEl && event.damage > 0) {
+          const effLabel = event.typeEff >= 2 ? 'Super effective!'
+            : (event.typeEff > 0 && event.typeEff < 1) ? 'Not very effective…' : '';
+          const hitLabel = event.crit ? ('Critical!' + (effLabel ? ' ' + effLabel : '')) : effLabel;
+          if (hitLabel) {
+            const popup = document.createElement('div');
+            popup.className = 'crit-popup' + (event.crit ? '' : event.typeEff >= 2 ? ' eff-popup--se' : ' eff-popup--nve');
+            popup.textContent = hitLabel;
+            targetEl.appendChild(popup);
+            setTimeout(() => popup.remove(), 900);
+          }
         }
         if (targetEl) {
           const targetSide = event.side === 'player' ? 'enemy' : 'player';

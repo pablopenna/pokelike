@@ -1462,6 +1462,7 @@ h1, h2, .pixel-font {
   left: 50%;
   transform: translateX(-50%);
   color: var(--gold);
+  /* .eff-popup--se / --nve recolor this for effectiveness-only labels */
   font-family: 'Press Start 2P', monospace;
   font-size: 10px;
   font-weight: bold;
@@ -3972,3 +3973,7 @@ body.dark-mode .region-card { filter: brightness(0.93); }
   .gba-menu-item:hover::before { animation: none; }
   .region-card, .region-card:hover, .region-card.gen-btn--active { transform: none; transition: none; }
 }
+
+/* Effectiveness-only hit labels (no crit): green for super effective, amber for resisted */
+.crit-popup.eff-popup--se  { color: #5be07a; }
+.crit-popup.eff-popup--nve { color: #ffb54a; font-size: 9px; }

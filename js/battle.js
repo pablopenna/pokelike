@@ -295,20 +295,22 @@ function executeTurn(ctx, io, turn, action, roundState) {
   }
 
   let move = action.move;
-  // If both sides are stuck with useless moves, force Struggle on both
-  if (bothUseless) {
+  // If both sides are stuck with useless moves, force Struggle on both to
+  // break the stalemate — Battle Tower (auto) only: campaign battles never
+  // show Struggle, the moves simply keep failing.
+  if (bothUseless && !io.interactive) {
     move = STRUGGLE();
   }
   // Immunity (×0): a manually-chosen move is respected and simply fails
   // ("No effect!" — the move buttons warn beforehand). An AI/auto-chosen move
-  // falls back to the attacker's strongest move that DOES affect the target,
-  // and only resorts to typeless Struggle when nothing does — the escape
-  // hatch that keeps auto battles (Battle Tower) from deadlocking.
+  // falls back to the attacker's strongest move that DOES affect the target.
+  // With no usable alternative: the Battle Tower resorts to typeless Struggle
+  // (deadlock escape hatch); in the campaign the attack just fails for 0.
   if (!move.noDamage && !action.manual && getTypeEffectiveness(move.type, target.types || ['Normal']) === 0) {
     const alt = getMovesForPokemon(attacker)
       .filter(m => !m.noDamage && getTypeEffectiveness(m.type, target.types || ['Normal']) > 0)
       .sort((a, b) => (b.power || 0) - (a.power || 0))[0];
-    move = alt || STRUGGLE();
+    move = alt || (io.interactive ? move : STRUGGLE());
   }
   const attackerItems = side === 'player' ? pActiveItems : eActiveItems;
   const defenderItems = side === 'player' ? eActiveItems : pActiveItems;
