@@ -2690,6 +2690,25 @@ function spawnBloodPool(targetEl) {
 // When true, the player's turns are auto-played by the AI (Auto button).
 let _battleAuto = false;
 
+// Classic GBA-style battle message box (bottom of the battle screen). Used for
+// hit-result text: "A critical hit!", "It's super effective!", etc. The box
+// stays up ~1.5s (scaled by battle speed) and later messages replace it.
+function showBattleHitMessage(text) {
+  const screen = document.getElementById('battle-screen');
+  if (!screen) return;
+  let box = document.getElementById('battle-msg-box');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'battle-msg-box';
+    screen.appendChild(box);
+  }
+  box.textContent = text;
+  box.classList.add('visible');
+  clearTimeout(box._hideTimer);
+  box._hideTimer = setTimeout(() => box.classList.remove('visible'),
+    Math.max(400, 1500 / battleSpeedMultiplier));
+}
+
 // Animate a single round's worth of events on the already-rendered field.
 // hpTrack = { player:[...], enemy:[...] } holds the currently-DISPLAYED HP so
 // bars tween smoothly from frame to frame. Reuses the same FX as the auto path.
@@ -2724,16 +2743,15 @@ async function animateInteractiveEvents(events, pTeam, eTeam, hpTrack) {
         targetEl.classList.add(hitClass);
         if (typeof spawnImpactFX === 'function') spawnImpactFX(targetEl, { crit: ev.crit, superEff: ev.typeEff >= 2, damage: ev.damage });
         if (typeof battleShake === 'function') battleShake(ev.crit ? 'brutal' : ev.typeEff >= 2 ? 'heavy' : 'light');
-        // Hit label: crit and/or effectiveness. Plain neutral hits show nothing.
-        const effLabel = ev.typeEff >= 2 ? 'Super effective!'
-          : (ev.typeEff > 0 && ev.typeEff < 1) ? 'Not very effective…' : '';
-        const hitLabel = ev.crit ? ('Critical!' + (effLabel ? ' ' + effLabel : '')) : effLabel;
+        // Classic hit-result text: crit and/or effectiveness. Plain neutral
+        // hits show nothing.
+        const effLabel = ev.typeEff >= 2 ? "It's super effective!"
+          : (ev.typeEff > 0 && ev.typeEff < 1) ? "It's not very effective…" : '';
+        const hitLabel = (ev.crit ? 'A critical hit! ' : '') + effLabel;
         if (ev.crit) targetEl.classList.add('crit-flash');
-        if (hitLabel) {
-          const popup = document.createElement('div');
-          popup.className = 'crit-popup' + (ev.crit ? '' : ev.typeEff >= 2 ? ' eff-popup--se' : ' eff-popup--nve');
-          popup.textContent = hitLabel;
-          targetEl.appendChild(popup); setTimeout(() => popup.remove(), 900);
+        if (hitLabel.trim()) {
+          showBattleHitMessage(hitLabel.trim());
+          await sleep(520); // give the message box time to be read
         }
         const track = hpTrack[ev.targetSide];
         await animateHpBar(targetEl, track[ev.targetIdx], ev.targetHpAfter, maxFor(ev.targetSide, ev.targetIdx));
@@ -2741,14 +2759,10 @@ async function animateInteractiveEvents(events, pTeam, eTeam, hpTrack) {
         await sleep(260);
         targetEl.classList.remove(hitClass, 'crit-flash');
       } else if (targetEl) {
-        // Immune hit (×0): the attack failed — say so.
+        // Immune hit (×0): the attack failed — say so, classic style.
         if (ev.typeEff === 0) {
-          const popup = document.createElement('div');
-          popup.className = 'crit-popup';
-          popup.textContent = 'No effect!';
-          targetEl.appendChild(popup);
-          setTimeout(() => popup.remove(), 800);
-          await sleep(300);
+          showBattleHitMessage(`It doesn't affect ${ev.targetName}…`);
+          await sleep(620);
         }
         await sleep(160);
       }
@@ -3087,17 +3101,15 @@ async function animateBattleVisually(detailedLog, pTeamInit, eTeamInit) {
         else if (event.typeEff >= 2) battleShake('heavy');
         else if (event.damage > 0) battleShake('light');
         if (event.crit && targetEl) targetEl.classList.add('crit-flash');
-        // Hit label: crit and/or effectiveness. Plain neutral hits show nothing.
+        // Classic hit-result text: crit and/or effectiveness. Plain neutral
+        // hits show nothing.
         if (targetEl && event.damage > 0) {
-          const effLabel = event.typeEff >= 2 ? 'Super effective!'
-            : (event.typeEff > 0 && event.typeEff < 1) ? 'Not very effective…' : '';
-          const hitLabel = event.crit ? ('Critical!' + (effLabel ? ' ' + effLabel : '')) : effLabel;
+          const effLabel = event.typeEff >= 2 ? "It's super effective!"
+            : (event.typeEff > 0 && event.typeEff < 1) ? "It's not very effective…" : '';
+          const hitLabel = ((event.crit ? 'A critical hit! ' : '') + effLabel).trim();
           if (hitLabel) {
-            const popup = document.createElement('div');
-            popup.className = 'crit-popup' + (event.crit ? '' : event.typeEff >= 2 ? ' eff-popup--se' : ' eff-popup--nve');
-            popup.textContent = hitLabel;
-            targetEl.appendChild(popup);
-            setTimeout(() => popup.remove(), 900);
+            showBattleHitMessage(hitLabel);
+            await sleep(520); // give the message box time to be read
           }
         }
         if (targetEl) {

@@ -3974,6 +3974,29 @@ body.dark-mode .region-card { filter: brightness(0.93); }
   .region-card, .region-card:hover, .region-card.gen-btn--active { transform: none; transition: none; }
 }
 
-/* Effectiveness-only hit labels (no crit): green for super effective, amber for resisted */
-.crit-popup.eff-popup--se  { color: #5be07a; }
-.crit-popup.eff-popup--nve { color: #ffb54a; font-size: 9px; }
+/* Classic GBA battle message box: "A critical hit!", "It's super effective!" */
+#battle-msg-box {
+  position: fixed;
+  left: 50%;
+  bottom: 118px;
+  transform: translateX(-50%);
+  max-width: min(480px, 92vw);
+  background: linear-gradient(180deg, #fdf7e4, var(--gba-cream) 60%, var(--gba-cream-deep));
+  border: 2px solid var(--gba-frame);
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px var(--gba-frame-light), 0 3px 0 2px rgba(0, 0, 0, 0.45);
+  color: var(--gba-ink);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  line-height: 1.7;
+  padding: 11px 16px;
+  text-align: center;
+  z-index: 90;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease-out;
+}
+#battle-msg-box.visible { opacity: 1; }
+@media (max-width: 640px) {
+  #battle-msg-box { bottom: 150px; font-size: 9px; }
+}

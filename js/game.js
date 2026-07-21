@@ -2519,6 +2519,7 @@ function runBattleScreen(enemyTeam, isBoss, onWin, onLose, enemyName = null, ene
       await animateBattleVisually(r.detailedLog, pTeamCopy, eTeamInit);
       clearTimeout(autoSpeedTimer);
       document.getElementById('overtime-banner')?.remove();
+      document.getElementById('battle-msg-box')?.remove();
       if (battleAborted()) return;
     } else {
       // ── Interactive turn-based path (normal mode) ──
@@ -2532,6 +2533,7 @@ function runBattleScreen(enemyTeam, isBoss, onWin, onLose, enemyName = null, ene
       document.getElementById('battle-command').style.display = 'none';
       document.getElementById('battle-party-select').style.display = 'none';
       document.getElementById('overtime-banner')?.remove();
+      document.getElementById('battle-msg-box')?.remove();
       if (battleAborted()) return;
       playerWon = res.playerWon; resultP = res.pTeam; resultE = res.eTeam; playerParticipants = res.playerParticipants;
     }
