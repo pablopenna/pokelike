@@ -160,34 +160,118 @@ const POKELIKE_RULES = {
 
 /* ---------- Human-readable rendering ---------- */
 
+// Full hand-written game guide with a section menu. (The old version rendered
+// the terse LLM spec — humans get a proper manual now.)
+const _GUIDE_SECTIONS = [
+  { id: 'start', icon: '🎯', title: 'Getting started', html: `
+    <p>Pokelike is a roguelike: pick a starter, climb a branching map, beat all 8 Gym Leaders and
+    the Elite Four + Champion. Lose your whole team and the run is over.</p>
+    <ul>
+      <li><b>Region cards</b> on the title screen pick your generation: <b>Kanto (I)</b> #1–151,
+      <b>Johto (II)</b> #152–251, <b>Hoenn (III)</b> #252–386, or <b>Tot</b> — all three mixed:
+      every map's gym is rolled among the three regions' leaders and the final league mixes all gens.</li>
+      <li><b>Normal Mode</b> — the standard run. <b>Nuzlocke</b> — hardcore: any Pokémon that faints is
+      lost forever (rival battles excepted). <b>Battle Tower</b> — a separate endless auto-battle gauntlet.</li>
+      <li>You start with 1 Pokémon; your allowed team size grows as you earn badges.</li>
+    </ul>` },
+  { id: 'map', icon: '🗺️', title: 'The map', html: `
+    <p>Each map is a branching graph — you move downward, one reachable node per step, and every path
+    ends at the Gym Leader. Node types:</p>
+    <ul>
+      <li><b>⚔ Wild battle</b> (+1 level) · <b>⚑ Trainer</b> (+2 levels, themed teams) · <b>♛ Gym</b> (+3 levels)</li>
+      <li><b>⬟ Catch</b> — recruit a wild Pokémon · <b>✦ Item</b> · <b>? Random event</b></li>
+      <li><b>+ Pokémon Center</b> — one full heal per map, place it wisely</li>
+      <li><b>♪ Move Tutor</b> — upgrade a move's power tier · <b>⇄ Trade</b> — swap a Pokémon for one 3 levels higher</li>
+      <li><b>⚝ Legendary</b> — beat it to recruit it (maps 6+)</li>
+      <li><b>Rival</b> — Silver in Johto, Team Aqua/Magma in Hoenn (maps 2/4/6/8): double XP for the whole
+      team, full heal after, and Nuzlocke-exempt.</li>
+    </ul>
+    <p>A per-map <b>level cap</b> equal to the leader's ace keeps you from out-leveling the challenge.</p>` },
+  { id: 'battle', icon: '⚔️', title: 'Battles', html: `
+    <p>Turn-based, one active Pokémon per side; benched teammates wait as Poké Balls.</p>
+    <ul>
+      <li>Each Pokémon carries one attacking move per type it has. Buttons show a <b>×2 / ×½ / ×0</b> tag
+      against the current enemy — type effectiveness follows the official 18-type chart, Fairy included.</li>
+      <li><b>Immunities are real</b>: a ×0 move fails ("No effect"). If literally nobody on either side can
+      hit the other, the battle ends gracefully — Run away (normal battle) or Retreat (gym).</li>
+      <li><b>Critical hits</b>: 6.25% chance, ×1.5 damage (20% with a Scope Lens). Banners over the target
+      call out crits and effectiveness as the damage lands.</li>
+      <li><b>Switching</b> uses your turn — the incoming Pokémon takes the hit. The <b>Auto</b> button lets
+      the AI play, and it is smart enough to switch when the active Pokémon can't touch the enemy.</li>
+      <li>Faster Pokémon act first; Quick Claw / Lagging Tail bend the order. After round 100, attacks deal
+      ×3 damage so stalls end.</li>
+    </ul>` },
+  { id: 'team', icon: '📈', title: 'Team & XP', html: `
+    <ul>
+      <li><b>The whole team shares XP — fainted Pokémon included</b>, so nobody falls behind. Wild +1,
+      trainer +2, gym +3, rival +4, capped at the map's level cap.</li>
+      <li>Fainted Pokémon revive automatically when you reach the next map; mid-map use a Pokémon Center,
+      a Max Revive, or win a rival battle.</li>
+      <li>Pokémon <b>evolve</b> at their level thresholds (branching lines let you choose the form).</li>
+      <li>Starters build <b>permanent star buffs</b> across runs — finishing runs makes that line stronger
+      in future ones.</li>
+    </ul>` },
+  { id: 'items', icon: '🎒', title: 'Items', html: `
+    <ul>
+      <li><b>Held items</b> live on a Pokémon and work automatically: Leftovers heal each round, Choice
+      Band boosts physical damage, Focus Sash survives a one-shot, King's Rock can flinch, type items
+      (Charcoal, Mystic Water…) boost matching moves. The badge on each battle card shows what a Pokémon
+      is holding — tap it for the effect.</li>
+      <li><b>Bag items</b> are consumables used from the map or prep screens: Rare Candy, Max Revive,
+      Full Restore, TMs, Escape Rope (revive after a lost non-boss battle)…</li>
+      <li>Enemy aces carry held items too — Gym Leaders and the Elite Four fight equipped, in every region.</li>
+    </ul>` },
+  { id: 'league', icon: '🏆', title: 'Gyms & the League', html: `
+    <ul>
+      <li>Every Gym Leader fields a <b>full team of 6</b>: their canonical aces plus type-matched filler at
+      appropriate levels — never an evolution beyond what its level allows.</li>
+      <li>Map 9 is the <b>Elite Four</b>: four members plus the Champion, back-to-back, with a prep screen
+      between battles to reorder your team and use items.</li>
+      <li>In <b>Tot</b> mode each gym slot is rolled among the three regions' leaders, and the league mixes
+      members from all gens — levels are normalized so difficulty stays consistent.</li>
+      <li>In <b>Hoenn</b>, Team Aqua or Team Magma (rolled per run) ambushes you on the rival maps,
+      escalating from grunts to Archie/Maxie.</li>
+    </ul>` },
+  { id: 'tower', icon: '🗼', title: 'Battle Tower', html: `
+    <ul>
+      <li>An endless <b>auto-battle</b> gauntlet, separate from the campaign — unlock it by beating the
+      game once. Higher stages unlock later generations (up to #649).</li>
+      <li><b>Type traits</b> are the Tower's core: stacking same-type Pokémon on your team unlocks tiered
+      passive powers (Fire: attack boosts · Steel: damage guard, pierced by super-effective hits ·
+      Flying: dodges · Ghost: executes…). Enemy themed teams have traits too — check the region preview
+      and build counters.</li>
+      <li>Shiny Pokémon count double toward trait tiers. Score comes from how deep you get.</li>
+    </ul>` },
+  { id: 'collect', icon: '📚', title: 'Collection & records', html: `
+    <ul>
+      <li><b>Pokédex</b> tracks caught species per generation — completing Gen 1 earns the Shiny Charm
+      (doubles shiny odds). There is a separate <b>shiny dex</b>.</li>
+      <li><b>Achievements</b> cover each generation's runs, Nuzlocke feats and challenge builds
+      (monotype, shiny squad, no-Center…).</li>
+      <li>The <b>Hall of Fame</b> records every championship with your team, filterable by mode and
+      generation.</li>
+    </ul>` },
+  { id: 'save', icon: '☁️', title: 'Saving', html: `
+    <ul>
+      <li>Progress auto-saves in your browser — <b>Continue Run</b> resumes mid-map, one run at a time.</li>
+      <li><b>Save Code</b> (optional account) syncs your collection and Hall of Fame across devices; the
+      game works fully offline from it.</li>
+      <li>Pokémon and trainer sprites load from the internet, so a connection is needed to play.</li>
+    </ul>` },
+];
+
 function _rulesHumanHTML() {
-  const r = POKELIKE_RULES;
-  const li = (s) => `<li>${s}</li>`;
-  const section = (title, inner) =>
-    `<div class="rules-sec"><h3>${title}</h3>${inner}</div>`;
-
-  const modes = Object.values(r.modes).map(li).join('');
-  const gens = Object.entries(r.generations)
-    .map(([k, v]) => li(`<b>${k === 'both' ? 'I+II' : 'Gen ' + k}</b> — ${v}`)).join('');
-  const nodes = Object.entries(r.map.node_types)
-    .map(([k, v]) => li(`<b>${k}</b> — ${v}`)).join('');
-  const combat = [
-    r.combat.style, r.combat.moves, r.combat.switching, r.combat.turn_order, r.combat.auto,
-    `XP: wild +${r.combat.xp_rewards.wild}, trainer +${r.combat.xp_rewards.trainer}, gym +${r.combat.xp_rewards.gym}. ${r.combat.xp_note}`,
-  ].map(li).join('');
-  const bosses = Object.values(r.bosses).map(li).join('');
-
+  const menu = _GUIDE_SECTIONS.map(s =>
+    `<button class="rules-menu-chip" onclick="document.getElementById('guide-${s.id}')?.scrollIntoView({behavior:'smooth',block:'start'})">${s.icon} ${s.title}</button>`
+  ).join('');
+  const sections = _GUIDE_SECTIONS.map(s =>
+    `<div class="rules-sec" id="guide-${s.id}"><h3>${s.icon} ${s.title}</h3>${s.html}</div>`
+  ).join('');
   return (
-    `<p class="rules-lead">${r.summary}</p>` +
-    section('🎯 Objective', `<p>${r.objective}</p>`) +
-    section('🌍 Generations', `<ul>${gens}</ul>`) +
-    section('🎮 Modes', `<ul>${modes}</ul>`) +
-    section('🗺️ The map', `<p>${r.map.structure}</p><ul>${nodes}</ul>`) +
-    section('⚔️ Combat', `<ul>${combat}</ul>`) +
-    section('🏆 Gyms, Elite Four & Champion', `<ul>${bosses}</ul>`) +
-    section('🎒 Items', `<p>${r.items}</p>`) +
-    section('💀 Losing', `<p>${r.losing}</p>`) +
-    `<p class="rules-foot">Fork de <a href="${r.fork_of}" target="_blank" rel="noopener">pokelike.xyz</a>.</p>`
+    `<p class="rules-lead">${POKELIKE_RULES.summary}</p>` +
+    `<div class="rules-menu">${menu}</div>` +
+    sections +
+    `<p class="rules-foot">Fork of <a href="${POKELIKE_RULES.fork_of}" target="_blank" rel="noopener">pokelike.xyz</a>.</p>`
   );
 }
 

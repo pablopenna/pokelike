@@ -4191,3 +4191,26 @@ body.dark-mode .region-card { filter: brightness(0.93); }
   .battle-poke-name { font-size: 6px; padding: 2px 7px; }
   .battle-pokemon .poke-hp { padding: 2px 4px; }
 }
+
+/* ===== Guide section menu (How to Play modal) ===== */
+.rules-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.rules-menu-chip {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  padding: 6px 9px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.rules-menu-chip:hover { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.35); }
+.rules-sec { scroll-margin-top: 8px; }
