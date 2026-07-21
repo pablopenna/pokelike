@@ -2741,8 +2741,10 @@ let _battleAuto = false;
 
 // Modern floating hit banners over the struck Pokémon: "CRITICAL HIT!",
 // "SUPER EFFECTIVE!", etc. Fire-and-forget (pure CSS animation) so they play
-// SIMULTANEOUSLY with the damage/HP animation. Stacked when both apply.
-// Skipped at high battle speed (Tower skip mode) to avoid DOM churn.
+// SIMULTANEOUSLY with the damage/HP animation. Rendered in a fixed overlay at
+// document level — never clipped by card overflow or covered by neighboring
+// cards (the mobile layout is tight). Stacked with a short cascade when crit
+// and effectiveness both apply. Skipped at high battle speed (Tower skip).
 function spawnHitBanners(targetEl, { crit, typeEff }) {
   if (!targetEl || battleSpeedMultiplier > 2) return;
   const banners = [];
@@ -2750,14 +2752,25 @@ function spawnHitBanners(targetEl, { crit, typeEff }) {
   if (typeEff >= 2) banners.push(['se', 'Super effective!']);
   else if (typeEff > 0 && typeEff < 1) banners.push(['nve', 'Not very effective']);
   else if (typeEff === 0) banners.push(['imm', 'No effect']);
+  if (!banners.length) return;
+
+  const rect = targetEl.getBoundingClientRect();
+  const stackH = 38;
+  // Above the card by default; below it when that would leave the viewport.
+  const above = rect.top - 10 - banners.length * stackH > 8;
+  const cx = Math.max(95, Math.min(window.innerWidth - 95, rect.left + rect.width / 2));
+
   banners.forEach(([kind, text], i) => {
     const b = document.createElement('div');
     b.className = `hit-banner hit-banner--${kind}`;
     b.textContent = text;
-    b.style.top = (-10 - i * 27) + 'px';
-    b.style.animationDelay = (i * 100) + 'ms';
-    targetEl.appendChild(b);
-    setTimeout(() => b.remove(), 1500 + i * 100);
+    b.style.left = cx + 'px';
+    b.style.top = (above
+      ? rect.top - 14 - (banners.length - 1 - i) * stackH
+      : rect.bottom + 10 + i * stackH) + 'px';
+    b.style.animationDelay = (i * 110) + 'ms';
+    document.body.appendChild(b);
+    setTimeout(() => b.remove(), 1700 + i * 110);
   });
 }
 
