@@ -2739,9 +2739,30 @@ function spawnBloodPool(targetEl) {
 // When true, the player's turns are auto-played by the AI (Auto button).
 let _battleAuto = false;
 
-// Classic GBA-style battle message box (bottom of the battle screen). Used for
-// hit-result text: "A critical hit!", "It's super effective!", etc. The box
-// stays up ~1.5s (scaled by battle speed) and later messages replace it.
+// Modern floating hit banners over the struck Pokémon: "CRITICAL HIT!",
+// "SUPER EFFECTIVE!", etc. Fire-and-forget (pure CSS animation) so they play
+// SIMULTANEOUSLY with the damage/HP animation. Stacked when both apply.
+// Skipped at high battle speed (Tower skip mode) to avoid DOM churn.
+function spawnHitBanners(targetEl, { crit, typeEff }) {
+  if (!targetEl || battleSpeedMultiplier > 2) return;
+  const banners = [];
+  if (crit) banners.push(['crit', 'Critical hit!']);
+  if (typeEff >= 2) banners.push(['se', 'Super effective!']);
+  else if (typeEff > 0 && typeEff < 1) banners.push(['nve', 'Not very effective']);
+  else if (typeEff === 0) banners.push(['imm', 'No effect']);
+  banners.forEach(([kind, text], i) => {
+    const b = document.createElement('div');
+    b.className = `hit-banner hit-banner--${kind}`;
+    b.textContent = text;
+    b.style.top = (-10 - i * 27) + 'px';
+    b.style.animationDelay = (i * 100) + 'ms';
+    targetEl.appendChild(b);
+    setTimeout(() => b.remove(), 1500 + i * 100);
+  });
+}
+
+// Classic GBA-style battle message box (bottom of the battle screen). Still
+// used for blocking notices like the mutual-immunity standoff.
 function showBattleHitMessage(text) {
   const screen = document.getElementById('battle-screen');
   if (!screen) return;
@@ -2792,26 +2813,20 @@ async function animateInteractiveEvents(events, pTeam, eTeam, hpTrack) {
         targetEl.classList.add(hitClass);
         if (typeof spawnImpactFX === 'function') spawnImpactFX(targetEl, { crit: ev.crit, superEff: ev.typeEff >= 2, damage: ev.damage });
         if (typeof battleShake === 'function') battleShake(ev.crit ? 'brutal' : ev.typeEff >= 2 ? 'heavy' : 'light');
-        // Classic hit-result text: crit and/or effectiveness. Plain neutral
-        // hits show nothing.
-        const effLabel = ev.typeEff >= 2 ? "It's super effective!"
-          : (ev.typeEff > 0 && ev.typeEff < 1) ? "It's not very effective…" : '';
-        const hitLabel = (ev.crit ? 'A critical hit! ' : '') + effLabel;
+        // Hit banners (crit / effectiveness) pop concurrently with the HP
+        // animation below — no pause. Plain neutral hits show nothing.
         if (ev.crit) targetEl.classList.add('crit-flash');
-        if (hitLabel.trim()) {
-          showBattleHitMessage(hitLabel.trim());
-          await sleep(520); // give the message box time to be read
-        }
+        spawnHitBanners(targetEl, ev);
         const track = hpTrack[ev.targetSide];
         await animateHpBar(targetEl, track[ev.targetIdx], ev.targetHpAfter, maxFor(ev.targetSide, ev.targetIdx));
         track[ev.targetIdx] = ev.targetHpAfter;
         await sleep(260);
         targetEl.classList.remove(hitClass, 'crit-flash');
       } else if (targetEl) {
-        // Immune hit (×0): the attack failed — say so, classic style.
+        // Immune hit (×0): the attack failed — flash the banner.
         if (ev.typeEff === 0) {
-          showBattleHitMessage(`It doesn't affect ${ev.targetName}…`);
-          await sleep(620);
+          spawnHitBanners(targetEl, ev);
+          await sleep(420); // brief beat — there's no HP animation to fill it
         }
         await sleep(160);
       }
@@ -3150,17 +3165,8 @@ async function animateBattleVisually(detailedLog, pTeamInit, eTeamInit) {
         else if (event.typeEff >= 2) battleShake('heavy');
         else if (event.damage > 0) battleShake('light');
         if (event.crit && targetEl) targetEl.classList.add('crit-flash');
-        // Classic hit-result text: crit and/or effectiveness. Plain neutral
-        // hits show nothing.
-        if (targetEl && event.damage > 0) {
-          const effLabel = event.typeEff >= 2 ? "It's super effective!"
-            : (event.typeEff > 0 && event.typeEff < 1) ? "It's not very effective…" : '';
-          const hitLabel = ((event.crit ? 'A critical hit! ' : '') + effLabel).trim();
-          if (hitLabel) {
-            showBattleHitMessage(hitLabel);
-            await sleep(520); // give the message box time to be read
-          }
-        }
+        // Hit banners pop concurrently with the HP animation — no pause.
+        if (targetEl && event.damage > 0) spawnHitBanners(targetEl, event);
         if (targetEl) {
           const targetSide = event.side === 'player' ? 'enemy' : 'player';
           const targetHpTrack = targetSide === 'player' ? pHp : eHp;

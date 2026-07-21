@@ -4055,3 +4055,46 @@ body.dark-mode .region-card { filter: brightness(0.93); }
 #map-node-tooltip.docked div[style*="color:#ffd76b"] { color: #8a6410 !important; }
 #map-node-tooltip.docked div[style*="color:#7ecf7e"] { color: #2e7a3e !important; }
 #map-node-tooltip.docked span { color: var(--gba-ink-dim) !important; }
+
+/* ===== Modern hit banners: pop over the struck Pokémon, concurrent with HP drain ===== */
+.hit-banner {
+  position: absolute;
+  left: 50%;
+  white-space: nowrap;
+  padding: 5px 14px 5px 12px;
+  border-radius: 999px;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  font-style: italic;
+  font-size: 12.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+  z-index: 40;
+  opacity: 0;
+  transform: translateX(-50%) skewX(-7deg) scale(0.4);
+  animation: hit-banner-pop 1.35s cubic-bezier(0.22, 0.9, 0.3, 1.15) forwards;
+}
+.hit-banner--crit { background: linear-gradient(135deg, #ffd94e, #f09a00); color: #3d2800; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35); }
+.hit-banner--se   { background: linear-gradient(135deg, #ff7a1f, #e5352e); }
+.hit-banner--nve  { background: linear-gradient(135deg, #64778c, #3e4c5c); }
+.hit-banner--imm  { background: linear-gradient(135deg, #8d929c, #565b64); }
+@keyframes hit-banner-pop {
+  0%   { opacity: 0; transform: translateX(-50%) skewX(-7deg) scale(0.4) translateY(10px); }
+  12%  { opacity: 1; transform: translateX(-50%) skewX(-7deg) scale(1.14) translateY(0); }
+  22%  { transform: translateX(-50%) skewX(-7deg) scale(1); }
+  78%  { opacity: 1; transform: translateX(-50%) skewX(-7deg) scale(1) translateY(-2px); }
+  100% { opacity: 0; transform: translateX(-50%) skewX(-7deg) scale(0.96) translateY(-16px); }
+}
+@media (max-width: 640px) {
+  .hit-banner { font-size: 10.5px; padding: 4px 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hit-banner { animation: hit-banner-fade 1.2s ease-out forwards; }
+  @keyframes hit-banner-fade {
+    0% { opacity: 0; } 10% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; }
+  }
+}
