@@ -2338,8 +2338,34 @@ function bestMoveVs(attacker, defender) {
   }
   return best;
 }
+// Can this Pokémon affect that defender at all? (Un-transformed Ditto counts
+// as capable — it will copy the enemy's types on its first turn.)
+function canAffect(attacker, defender) {
+  if (attacker.speciesId === 132 && !attacker._transformed) return true;
+  return getMovesForPokemon(attacker).some(m =>
+    !m.noDamage && getTypeEffectiveness(m.type, defender.types || ['Normal']) > 0);
+}
+
 function aiPlayerAction(active, team, idx, enemy) {
+  // Auto mode: if the active Pokémon can't touch the enemy (immunity) but a
+  // benched teammate can, switch instead of failing attacks forever.
+  if (!canAffect(active, enemy)) {
+    const alt = team.findIndex((p, i) => i !== idx && p.currentHp > 0 && canAffect(p, enemy));
+    if (alt >= 0) return { type: 'switch', idx: alt };
+  }
   return { type: 'attack', move: bestMoveVs(active, enemy) };
+}
+
+// True mutual-immunity standoff: no alive member of either side can affect
+// any alive member of the other. The battle can never end — detect it so the
+// campaign can resolve it gracefully instead of grinding to the round cap.
+function battleIsDeadlocked(pTeam, eTeam) {
+  const aliveP = pTeam.filter(p => p.currentHp > 0);
+  const aliveE = eTeam.filter(p => p.currentHp > 0);
+  if (!aliveP.length || !aliveE.length) return false;
+  const pCan = aliveP.some(p => aliveE.some(e => canAffect(p, e)));
+  const eCan = aliveE.some(e => aliveP.some(p => canAffect(e, p)));
+  return !pCan && !eCan;
 }
 // Improved enemy AI: take the KO when it's there; otherwise, if about to be
 // knocked out, bail to a Pokémon that survives (and ideally threatens) the player.
@@ -2411,6 +2437,9 @@ async function runInteractiveBattle(pTeamRaw, eTeamRaw, enemyItems, opts = {}) {
 
   try {
     while (!battleOver(ctx)) {
+      // Mutual immunity: neither side can ever land a hit — hand the standoff
+      // back to runBattleScreen for a graceful flee/retreat ending.
+      if (battleIsDeadlocked(pTeam, eTeam)) return { ...result(false), deadlock: true };
       await runBattleRound(ctx, io);
       if (aborted()) return result(false);
 
@@ -2533,8 +2562,37 @@ function runBattleScreen(enemyTeam, isBoss, onWin, onLose, enemyName = null, ene
       document.getElementById('battle-command').style.display = 'none';
       document.getElementById('battle-party-select').style.display = 'none';
       document.getElementById('overtime-banner')?.remove();
-      document.getElementById('battle-msg-box')?.remove();
       if (battleAborted()) return;
+
+      // Mutual immunity standoff — nobody can land a hit. Classic ending:
+      // flee a normal battle (advance, no rewards — Escape Rope semantics);
+      // retreat from a boss back to the map to rethink the team.
+      if (res.deadlock) {
+        renderBattleField(res.pTeam, res.eTeam);
+        showBattleHitMessage('Neither side can land a hit!');
+        const box = document.getElementById('battle-msg-box');
+        if (box) clearTimeout(box._hideTimer); // keep the message up
+        skipBtn.style.display = 'none';
+        continueEl.style.display = 'block';
+        continueEl.textContent = isBoss ? 'Retreat' : 'Run away';
+        continueEl.disabled = false;
+        continueEl.onclick = () => {
+          if (battleAborted()) return;
+          document.getElementById('battle-msg-box')?.remove();
+          if (isBoss) {
+            showMapScreen();          // gym stays unbeaten — no game over
+            resolve(false);
+          } else {
+            state._escapedViaRope = true;
+            if (onWin) onWin();       // advance the node, no XP / no capture
+            resolve(true);
+          }
+        };
+        if (_battleAuto) continueEl.onclick();
+        return;
+      }
+
+      document.getElementById('battle-msg-box')?.remove();
       playerWon = res.playerWon; resultP = res.pTeam; resultE = res.eTeam; playerParticipants = res.playerParticipants;
     }
 
