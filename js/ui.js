@@ -2774,6 +2774,71 @@ function spawnHitBanners(targetEl, { crit, typeEff }) {
   });
 }
 
+// ─── Classic GBA dialog sequence (Professor-style) ────────────────────────────
+// showGbaDialog({ lines, choices }) → Promise resolving to the chosen value
+// (or null when there are no choices). Typewriter text, tap to fast-forward /
+// advance, blinking ▼ between lines, and a classic option box for choices.
+function showGbaDialog({ lines = [], choices = null }) {
+  return new Promise(resolve => {
+    document.getElementById('gba-dialog-overlay')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'gba-dialog-overlay';
+    overlay.innerHTML =
+      `<div class="gba-choice-box" style="display:none;"></div>` +
+      `<div class="gba-dialog-box"><div class="gba-dialog-text"></div><span class="gba-dialog-next">▼</span></div>`;
+    document.body.appendChild(overlay);
+    const textEl = overlay.querySelector('.gba-dialog-text');
+    const nextEl = overlay.querySelector('.gba-dialog-next');
+    const choiceBox = overlay.querySelector('.gba-choice-box');
+    let i = 0, typing = false, typeTimer = null, fullText = '';
+
+    const finish = value => {
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+      resolve(value);
+    };
+    const showChoices = () => {
+      nextEl.style.visibility = 'hidden';
+      choiceBox.style.display = '';
+      choiceBox.innerHTML = choices.map((c, k) =>
+        `<button class="gba-choice" data-k="${k}"><span class="gba-choice-cursor">▶</span>${c.label}</button>`).join('');
+      choiceBox.querySelectorAll('.gba-choice').forEach(b => {
+        b.onclick = e => { e.stopPropagation(); finish(choices[+b.dataset.k].value); };
+      });
+      choiceBox.querySelector('.gba-choice')?.focus();
+    };
+    const typeLine = line => {
+      typing = true; fullText = line; textEl.textContent = '';
+      nextEl.style.visibility = 'hidden';
+      let c = 0;
+      clearInterval(typeTimer);
+      typeTimer = setInterval(() => {
+        textEl.textContent = fullText.slice(0, ++c);
+        if (c >= fullText.length) {
+          clearInterval(typeTimer); typing = false;
+          if (i >= lines.length && choices) showChoices();
+          else nextEl.style.visibility = 'visible';
+        }
+      }, 16);
+    };
+    const advance = () => {
+      if (choiceBox.style.display !== 'none') return; // choosing — taps don't advance
+      if (typing) { // fast-forward the current line
+        clearInterval(typeTimer); textEl.textContent = fullText; typing = false;
+        if (i >= lines.length && choices) showChoices();
+        else nextEl.style.visibility = 'visible';
+        return;
+      }
+      if (i < lines.length) { typeLine(lines[i++]); return; }
+      if (!choices) finish(null);
+    };
+    const onKey = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); advance(); } };
+    overlay.addEventListener('click', advance);
+    document.addEventListener('keydown', onKey);
+    advance();
+  });
+}
+
 // Classic GBA-style battle message box (bottom of the battle screen). Still
 // used for blocking notices like the mutual-immunity standoff.
 function showBattleHitMessage(text) {

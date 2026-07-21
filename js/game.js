@@ -124,8 +124,7 @@ async function initGame() {
     };
   });
   const selectedRunGen = () => selectedGen === 'both' ? 'all' : selectedGen;
-  document.getElementById('btn-new-run').onclick  = () => startNewRun(false, selectedRunGen());
-  document.getElementById('btn-hard-run').onclick = () => startNewRun(true,  selectedRunGen());
+  document.getElementById('btn-new-run').onclick = () => startAdventureFlow(selectedRunGen());
 
   const endlessBtn = document.getElementById('btn-endless-run');
   if (endlessBtn) {
@@ -188,10 +187,47 @@ async function initGame() {
   }
 }
 
+// Professor-style intro: the journey's mode is chosen through classic GBA
+// dialogs instead of separate title buttons. Normal runs also pick what a
+// full-team wipe means: retry the area (the long-standing default) or a true
+// blackout that ends the run.
+const REGION_NAMES = { '1': 'KANTO', '2': 'JOHTO', '3': 'HOENN', 'all': 'KANTO, JOHTO and HOENN' };
+async function startAdventureFlow(gen) {
+  const region = REGION_NAMES[gen] || 'KANTO';
+  const mode = await showGbaDialog({
+    lines: [
+      'Hello there! Glad to meet you!',
+      `Welcome to the world of POKÉMON! Your very own tale of grit and glory is about to unfold in ${region}!`,
+      'Tell me. How would you like to travel on your journey?',
+    ],
+    choices: [
+      { label: 'NORMAL', value: 'normal' },
+      { label: 'NUZLOCKE', value: 'nuzlocke' },
+    ],
+  });
+  let retryOnWipe = false;
+  if (mode === 'normal') {
+    const wipe = await showGbaDialog({
+      lines: [
+        'One more thing. If all your POKÉMON were to faint out there...',
+        'What should happen to you then?',
+      ],
+      choices: [
+        { label: 'RETRY THE AREA', value: 'retry' },
+        { label: 'BLACK OUT', value: 'blackout' },
+      ],
+    });
+    retryOnWipe = wipe === 'retry';
+  }
+  await startNewRun(mode === 'nuzlocke', gen, null, { retryOnWipe });
+}
+
 // gen: '1' | '2' | '3' | 'all'. The legacy gen2Mode/bothGens booleans are kept
 // in sync on state so the many existing reads (and old saves) keep working;
 // new code should read getRunGen() instead.
-async function startNewRun(nuzlockeMode = false, gen = '1', forcedStarterId = null) {
+// opts.retryOnWipe (Normal only): false = a wipe ends the run ("blacked out");
+// omitted/true = the area can be retried (legacy default, and what old saves get).
+async function startNewRun(nuzlockeMode = false, gen = '1', forcedStarterId = null, opts = {}) {
   runGeneration++;
   clearEndlessState();
   const savedTrainer = localStorage.getItem('poke_trainer') || null;
@@ -199,7 +235,7 @@ async function startNewRun(nuzlockeMode = false, gen = '1', forcedStarterId = nu
   seedRng(seed);
   const gen2Mode = gen === '2';
   const bothGens = gen === 'all';
-  state = { currentMap: 0, currentNode: null, team: [], items: [], badges: 0, map: null, eliteIndex: 0, trainer: savedTrainer || 'boy', starterSpeciesId: null, maxTeamSize: 1, nuzlockeMode, runGen: gen, gen2Mode, bothGens, silverBeaten: 0, usedPokecenter: false, pickedUpItem: false, runSeed: seed };
+  state = { currentMap: 0, currentNode: null, team: [], items: [], badges: 0, map: null, eliteIndex: 0, trainer: savedTrainer || 'boy', starterSpeciesId: null, maxTeamSize: 1, nuzlockeMode, runGen: gen, gen2Mode, bothGens, silverBeaten: 0, usedPokecenter: false, pickedUpItem: false, runSeed: seed, retryOnWipe: nuzlockeMode ? false : opts.retryOnWipe !== false };
   if (gen === '3') {
     // Which villain team ambushes this run (rival-slot encounters).
     state.villainTeam = rng() < 0.5 ? 'aqua' : 'magma';
@@ -2743,9 +2779,11 @@ function showBadgeScreen(leader) {
 
 async function showGameOver() {
   // Normal mode: a wipe lets you retry the current level (with a freshly
-  // generated map) instead of losing the whole run. Nuzlocke keeps its
-  // permadeath, and Battle Tower keeps its own flow → real game over.
-  if (!state.nuzlockeMode && !state.isEndlessMode && state.mapStartSnapshot) {
+  // generated map) instead of losing the whole run — unless the player chose
+  // "BLACK OUT" at the journey's start (state.retryOnWipe === false; old saves
+  // lack the field and keep the retry default). Nuzlocke keeps its permadeath,
+  // and Battle Tower keeps its own flow → real game over.
+  if (!state.nuzlockeMode && !state.isEndlessMode && state.retryOnWipe !== false && state.mapStartSnapshot) {
     return showLevelRetryScreen();
   }
   return doGameOver();
@@ -2817,7 +2855,7 @@ function showWinScreen() {
       : '';
     return `<div style="display:flex;flex-direction:column;align-items:center;">${renderPokemonCard(p, false, false)}${itemHtml}</div>`;
   }).join('');
-  document.getElementById('btn-play-again').onclick = () => startNewRun(state.nuzlockeMode, getRunGen());
+  document.getElementById('btn-play-again').onclick = () => startNewRun(state.nuzlockeMode, getRunGen(), null, { retryOnWipe: state.retryOnWipe !== false });
 
   // Track elite four wins
   const wins = incrementEliteWins();
@@ -3149,13 +3187,14 @@ function confirmResetRun() {
   const starterShiny = !!state.starterWasShiny;
   const nuz = !!state.nuzlockeMode;
   const runGen = getRunGen();
+  const retryOnWipe = state.retryOnWipe !== false;
   const isEndless = !!state.isEndlessMode;
   const stage = endlessState?.stageNumber ?? 1;
   clearSavedRun();
   if (isEndless) {
     startEndlessRun(stage, starterId, starterShiny);
   } else {
-    startNewRun(nuz, runGen, starterId);
+    startNewRun(nuz, runGen, starterId, { retryOnWipe });
   }
 }
 

@@ -3938,7 +3938,6 @@ body.dark-mode .btn-primary:disabled { box-shadow: 3px 3px 0 0 #000; }
 .gba-menu-item:disabled { cursor: not-allowed; }
 /* Per-mode ink accents — quiet color coding inside the dialog rows */
 #title-screen #btn-new-run     { color: #1a5088; }
-#title-screen #btn-hard-run    { color: #a02818; }
 #title-screen #btn-endless-run { color: #6a5410; }
 /* The Battle Tower lock overlay wraps its button in .endless-lock-wrap */
 .endless-lock-wrap { display: block; }
@@ -4214,3 +4213,80 @@ body.dark-mode .region-card { filter: brightness(0.93); }
 }
 .rules-menu-chip:hover { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.35); }
 .rules-sec { scroll-margin-top: 8px; }
+
+/* ===== Classic GBA professor dialog (mode selection at journey start) ===== */
+#gba-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  background: rgba(10, 14, 12, 0.55);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  cursor: pointer;
+}
+.gba-dialog-box {
+  position: absolute;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 24px));
+  min-height: 74px;
+  background: linear-gradient(180deg, #fdf7e4, var(--gba-cream) 60%, var(--gba-cream-deep));
+  border: 2px solid var(--gba-frame);
+  border-radius: 7px;
+  box-shadow: 0 0 0 2px var(--gba-frame-light), 0 0 0 4px rgba(0, 0, 0, 0.35), 0 6px 0 4px rgba(0, 0, 0, 0.4);
+  padding: 14px 34px 14px 16px;
+  text-align: left;
+}
+.gba-dialog-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  line-height: 2;
+  color: var(--gba-ink);
+  min-height: 40px;
+  white-space: pre-wrap;
+}
+.gba-dialog-next {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  font-size: 11px;
+  color: #c83828;
+  visibility: hidden;
+  animation: gba-next-bob 0.7s steps(2) infinite;
+}
+@keyframes gba-next-bob { 50% { transform: translateY(2px); } }
+.gba-choice-box {
+  position: absolute;
+  right: max(14px, calc(50% - 280px));
+  bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #fdf7e4, var(--gba-cream) 60%, var(--gba-cream-deep));
+  border: 2px solid var(--gba-frame);
+  border-radius: 7px;
+  box-shadow: 0 0 0 2px var(--gba-frame-light), 0 0 0 4px rgba(0, 0, 0, 0.35), 0 6px 0 4px rgba(0, 0, 0, 0.4);
+  padding: 8px 6px;
+  cursor: auto;
+}
+.gba-choice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--gba-ink);
+  padding: 8px 14px 8px 8px;
+  cursor: pointer;
+  text-align: left;
+  min-height: 40px;
+}
+.gba-choice-cursor { color: #c83828; font-size: 9px; visibility: hidden; }
+.gba-choice:hover .gba-choice-cursor,
+.gba-choice:focus-visible .gba-choice-cursor { visibility: visible; }
+.gba-choice:focus-visible { outline: none; background: rgba(48, 88, 72, 0.10); border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  .gba-dialog-next { animation: none; }
+}

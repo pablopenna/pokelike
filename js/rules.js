@@ -35,13 +35,17 @@ const POKELIKE_RULES = {
   },
 
   modes: {
+    how_chosen:
+      "Click 'New Adventure' and the professor asks how you'll travel (NORMAL / NUZLOCKE) through classic " +
+      "dialogs. Normal journeys also choose a wipe rule: RETRY THE AREA (a full-team faint restarts the " +
+      "current map) or BLACK OUT (a wipe ends the run).",
     normal:
       "Normal Mode — turn-based interactive battles. Fainted Pokémon still earn XP and are revived when " +
       "you reach the next map; mid-map you can heal them at a Pokémon Center, with a Max Revive, or by " +
       "winning a rival battle.",
     nuzlocke:
       "Nuzlocke — hardcore. Any Pokémon that faints in battle is lost permanently (exception: rival/Silver " +
-      "battles don't permanently faint your team if you win). Trade nodes are available.",
+      "battles don't permanently faint your team if you win). Trade nodes are available. A wipe always ends the run.",
     battle_tower: "Battle Tower — endless auto-battle gauntlet for score; separate from the main run.",
   },
 
@@ -99,8 +103,8 @@ const POKELIKE_RULES = {
   items: "Held items and consumables modify stats, healing, XP (e.g. Lucky Egg), and more.",
 
   losing:
-    "If your whole team faints you get a Game Over. In Normal you can retry the current map (fresh layout). " +
-    "In Nuzlocke, losses are permanent.",
+    "If your whole team faints: Normal with RETRY THE AREA restarts the current map (fresh layout, unlimited " +
+    "retries); Normal with BLACK OUT and Nuzlocke end the run.",
 
   dom_interaction: {
     note:
@@ -108,8 +112,9 @@ const POKELIKE_RULES = {
       "from the DOM. The current screen is the visible element with class 'screen'.",
     title_screen: {
       generation_toggle: '#gen-toggle .gen-btn[data-gen="1" | "2" | "3" | "both"]  (click to select generation; "both" = Tot, all gens)',
-      new_run: "#btn-new-run  (Normal Mode)",
-      nuzlocke: "#btn-hard-run  (Nuzlocke)",
+      new_run:
+        "#btn-new-run  (New Adventure — opens the professor dialog; pick NORMAL/NUZLOCKE via " +
+        ".gba-choice buttons, then the wipe rule for Normal; click the overlay to advance text)",
       battle_tower: "#btn-endless-run  (Battle Tower)",
       continue_run: "#btn-continue-run  (visible only if a saved run exists)",
       rules: 'open this spec UI: openRulesModal()',
@@ -170,8 +175,11 @@ const _GUIDE_SECTIONS = [
       <li><b>Region cards</b> on the title screen pick your generation: <b>Kanto (I)</b> #1–151,
       <b>Johto (II)</b> #152–251, <b>Hoenn (III)</b> #252–386, or <b>Tot</b> — all three mixed:
       every map's gym is rolled among the three regions' leaders and the final league mixes all gens.</li>
-      <li><b>Normal Mode</b> — the standard run. <b>Nuzlocke</b> — hardcore: any Pokémon that faints is
-      lost forever (rival battles excepted). <b>Battle Tower</b> — a separate endless auto-battle gauntlet.</li>
+      <li>Press <b>New Adventure</b> and the professor asks how you'll travel: <b>NORMAL</b> — the standard
+      run — or <b>NUZLOCKE</b> — hardcore, any Pokémon that faints is lost forever (rival battles excepted).</li>
+      <li>Normal journeys also choose a wipe rule: <b>RETRY THE AREA</b> (a full-team faint lets you restart
+      the current map) or <b>BLACK OUT</b> (a wipe ends the run, no retries).</li>
+      <li><b>Battle Tower</b> — a separate endless auto-battle gauntlet.</li>
       <li>You start with 1 Pokémon; your allowed team size grows as you earn badges.</li>
     </ul>` },
   { id: 'map', icon: '🗺️', title: 'The map', html: `
