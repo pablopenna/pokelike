@@ -186,6 +186,32 @@ function generateMap(mapIndex, nuzlockeMode = false, gen2Mode = false) {
     }
   }
 
+  // Guarantee at least 2 Move Tutors per map — the weighted rolls left ~8% of
+  // maps with none and players rely on tutors to upgrade move power. Missing
+  // tutors replace a common node on the mid/late content layers, one per map
+  // half so the guaranteed pair doesn't cluster.
+  {
+    const REPLACEABLE = new Set([NODE_TYPES.BATTLE, NODE_TYPES.TRAINER, NODE_TYPES.ITEM, NODE_TYPES.QUESTION]);
+    const tutorCount = () => layers.flat().filter(n => n.type === NODE_TYPES.MOVE_TUTOR).length;
+    const convertIn = layerSlice => {
+      const spots = layerSlice.flat().filter(n => REPLACEABLE.has(n.type));
+      if (!spots.length) return false;
+      const pick = spots[Math.floor(rng() * spots.length)];
+      pick.type = NODE_TYPES.MOVE_TUTOR;
+      delete pick.trainerSprite;
+      return true;
+    };
+    const contentEnd = 2 + contentCount;           // layers[2..contentEnd) are content
+    const mid = 4 + Math.floor((contentEnd - 4) / 2);
+    const halves = [layers.slice(4, mid), layers.slice(mid, contentEnd)]; // skip the 2 earliest content layers
+    for (const half of halves) {
+      if (tutorCount() >= 2) break;
+      if (half.some(l => l.some(n => n.type === NODE_TYPES.MOVE_TUTOR))) continue;
+      convertIn(half);
+    }
+    while (tutorCount() < 2 && convertIn(layers.slice(3, contentEnd))) { /* freak-roll fallback */ }
+  }
+
   // Boss layer
   layers.push([makeNode(bossId, NODE_TYPES.BOSS, bossLayerIdx, 0, { mapIndex })]);
 

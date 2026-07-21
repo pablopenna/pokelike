@@ -59,7 +59,7 @@ const POKELIKE_RULES = {
       QUESTION: "Random event.",
       POKECENTER: "Fully heal your team (one in the middle and one near the end are guaranteed).",
       LEGENDARY: "Legendary Pokémon encounter.",
-      MOVE_TUTOR: "Teach/upgrade moves.",
+      MOVE_TUTOR: "Teach/upgrade moves. At least 2 Move Tutor nodes are guaranteed per map.",
       TRADE: "Swap a Pokémon for one 3 levels higher.",
       SILVER: "Rival battle — Silver in Gen II, a Team Aqua/Magma ambush in Gen III. Double XP, full heal after, Nuzlocke-exempt.",
     },
@@ -181,7 +181,8 @@ const _GUIDE_SECTIONS = [
       <li><b>⚔ Wild battle</b> (+1 level) · <b>⚑ Trainer</b> (+2 levels, themed teams) · <b>♛ Gym</b> (+3 levels)</li>
       <li><b>⬟ Catch</b> — recruit a wild Pokémon · <b>✦ Item</b> · <b>? Random event</b></li>
       <li><b>+ Pokémon Center</b> — one full heal per map, place it wisely</li>
-      <li><b>♪ Move Tutor</b> — upgrade a move's power tier · <b>⇄ Trade</b> — swap a Pokémon for one 3 levels higher</li>
+      <li><b>♪ Move Tutor</b> — upgrade a move's power tier (at least 2 per map, guaranteed) ·
+      <b>⇄ Trade</b> — swap a Pokémon for one 3 levels higher</li>
       <li><b>⚝ Legendary</b> — beat it to recruit it (maps 6+)</li>
       <li><b>Rival</b> — Silver in Johto, Team Aqua/Magma in Hoenn (maps 2/4/6/8): double XP for the whole
       team, full heal after, and Nuzlocke-exempt.</li>
