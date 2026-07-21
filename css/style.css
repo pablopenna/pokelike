@@ -4170,3 +4170,24 @@ body.dark-mode .region-card { filter: brightness(0.93); }
 #map-node-tooltip.docked.visible,
 #item-tooltip.docked.visible,
 #trait-tooltip.docked.visible { pointer-events: auto !important; }
+
+/* ===== Active fighter lifted above the bottom info zone =====
+   The name plate + HP block occupy the card's bottom ~58px; without this the
+   150px active sprite stood BEHIND them and its lower third was hidden
+   (very visible on mobile). Sprite, platform, contact shadow and the attack
+   charge all rise above the info chips; the card grows to fit. */
+/* ID-qualified: must outrank `#player-side .battle-pokemon { min-height: 0 }`.
+   With the info now absolute, flow no longer sizes the card — without this
+   floor the active card collapses to its padding and overflow:hidden crops
+   the 150px sprite to a strip (the "Pokémon cut off" bug). */
+#player-side .battle-pokemon.active-pokemon,
+#enemy-side  .battle-pokemon.active-pokemon,
+.battle-pokemon.active-pokemon { min-height: 218px !important; }
+.battle-pokemon.active-pokemon .battle-sprite { bottom: 56px; }
+.battle-pokemon.active-pokemon .battle-base   { bottom: 63px; }
+.battle-pokemon.active-pokemon::before        { bottom: 65px; }
+.battle-pokemon.active-pokemon .attack-charge { bottom: 96px; }
+@media (max-width: 600px) {
+  .battle-poke-name { font-size: 6px; padding: 2px 7px; }
+  .battle-pokemon .poke-hp { padding: 2px 4px; }
+}
