@@ -544,7 +544,7 @@ const HOENN_GYM_LEADERS = [
     team: [
       { speciesId: 100, name: 'Voltorb',   types: ['Electric'],         baseStats: { hp:40,  atk:30,  def:50,  speed:100, special:55,  spdef:55  }, level: 32, heldItem: { id: 'eviolite', name: 'Eviolite', icon: '💎' } },
       { speciesId: 309, name: 'Electrike', types: ['Electric'],         baseStats: { hp:40,  atk:45,  def:40,  speed:65,  special:65,  spdef:40  }, level: 33, heldItem: { id: 'quick_claw', name: 'Quick Claw', icon: '🪝' } },
-      { speciesId: 82,  name: 'Magneton',  types: ['Electric','Steel'], baseStats: { hp:50,  atk:60,  def:95,  speed:70,  special:120, spdef:70  }, level: 35, heldItem: { id: 'magnet', name: 'Magnet', icon: '🧲' } },
+      { speciesId: 82,  name: 'Magneton',  types: ['Electric','Steel'], baseStats: { hp:50,  atk:60,  def:95,  speed:70,  special:120, spdef:70  }, level: 35 },
     ]
   },
   { name: 'Flannery', badge: 'Heat Badge', type: 'Fire', moveTier: 1,
@@ -1459,14 +1459,21 @@ function getSpeciesIdsByType(type, maxGenId = 151) {
 // shown as an evolution beyond its level threshold (Golem@13 → Geodude), and is
 // evolved forward when the level allows it (a Champion's filler reaches its final
 // form). This keeps the leader's type while avoiding premature evolutions.
-async function buildBossTeam(baseTeam, leaderType, maxGenId = 151, aceLevelTarget = null) {
+// opts.teamSize (default 6): total roster size — canonical members are never
+// dropped, so the effective size is max(teamSize, baseTeam.length). Early gyms
+// pass 3-5 so the player's small starting team isn't outnumbered 6-to-2.
+// opts.fillerSpread (default 4): how far below the ace the filler descends
+// (ace−1−min(i,spread)). Late gyms pass 1-2 so their filler stays a threat.
+async function buildBossTeam(baseTeam, leaderType, maxGenId = 151, aceLevelTarget = null, opts = {}) {
+  const teamSize = Math.max(Math.min(opts.teamSize ?? 6, 6), baseTeam.length);
+  const fillerSpread = opts.fillerSpread ?? 4;
   let team = baseTeam.map(p => ({ ...p }));
   const curAce = Math.max(...team.map(p => p.level));
   if (aceLevelTarget != null && curAce > 0) {
     const delta = aceLevelTarget - curAce;
     team = team.map(p => ({ ...p, level: Math.max(1, Math.min(100, p.level + delta)) }));
   }
-  if (team.length >= 6) return team.slice(0, 6);
+  if (team.length >= teamSize) return team.slice(0, teamSize);
 
   const ace = Math.max(...team.map(p => p.level));
   const used = new Set(team.map(p => p.speciesId ?? p.id));
@@ -1474,12 +1481,12 @@ async function buildBossTeam(baseTeam, leaderType, maxGenId = 151, aceLevelTarge
   let pool = isMixed ? [] : getSpeciesIdsByType(leaderType, maxGenId).filter(id => !used.has(id));
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
 
-  const need = 6 - team.length;
+  const need = teamSize - team.length;
   // Pick {id, level} per slot, resolving each to the evolution stage that fits
   // the slot's level. Cycling lets small type pools (e.g. Dragon) still fill 6.
   const picks = [];
   for (let k = 0, poolIdx = 0; picks.length < need && k < need * 60; k++) {
-    const lvl = Math.max(1, Math.min(100, ace - 1 - picks.length)); // below the ace, descending
+    const lvl = Math.max(1, Math.min(100, ace - 1 - Math.min(picks.length, fillerSpread))); // below the ace
     let id;
     if (pool.length) { id = pool[poolIdx % pool.length]; poolIdx++; }
     else { id = 1 + Math.floor(rng() * maxGenId); if (LEGENDARY_ID_SET.has(id)) continue; }
@@ -1491,7 +1498,7 @@ async function buildBossTeam(baseTeam, leaderType, maxGenId = 151, aceLevelTarge
     if (!sp) return;
     team.push({ speciesId: sp.id, name: sp.name, types: sp.types, baseStats: sp.baseStats, level: picks[idx].level });
   });
-  return team.slice(0, 6);
+  return team.slice(0, teamSize);
 }
 
 

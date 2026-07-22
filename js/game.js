@@ -889,12 +889,14 @@ function getLevelForNode(node) {
 }
 
 async function doBattleNode(node) {
-  // Gen 2/3: wild Pokemon scale below the node's level on a stair-step curve —
-  // -1 from map 2, -2 from map 4, -3 from map 6, -4 from map 8 onward.
-  // Other modes keep the legacy -1 from map 2 onward.
-  const reduction = (state.gen2Mode || getRunGen() === '3')
-    ? Math.min(4, Math.floor((state.currentMap + 1) / 2))
-    : (!state.isEndlessMode && state.currentMap >= 1 ? 1 : 0);
+  // Difficulty linearization: wild Pokémon run BELOW the node level early
+  // (−2 on maps 1-2, −1 on maps 3-4 — breathing room while the team is tiny)
+  // and AT node level from map 5 on (the old curve grew to −4 late, which
+  // made the endgame a farming stroll).
+  const reduction = state.isEndlessMode ? 0
+    : state.currentMap <= 1 ? 2
+    : state.currentMap <= 3 ? 1
+    : 0;
   const level = Math.max(1, getLevelForNode(node) - reduction);
   let choices = await getCatchChoices(getEncounterMapIndex(), 3, getCatchGenRange().maxGenId, !state.isEndlessMode, getCatchGenRange().minGenId);
   const lvlFiltered = choices.filter(sp => minLevelForSpecies(sp.id ?? sp.speciesId) <= level);
@@ -940,8 +942,19 @@ async function doBattleNode(node) {
 }
 
 // Runs a gym battle for the given leader (team padded to 6 of the leader's type).
+// Difficulty linearization: early gyms field smaller rosters (3/4/5, full 6
+// from map 4) so the player's young team isn't outnumbered 6-to-2, and later
+// gyms tighten their filler toward the ace so it stays a threat.
+function gymBuildOpts() {
+  const m = state.currentMap;
+  return {
+    teamSize: m === 0 ? 3 : m === 1 ? 4 : m === 2 ? 5 : 6,
+    fillerSpread: m <= 2 ? 4 : m <= 4 ? 3 : m <= 6 ? 2 : 1,
+  };
+}
+
 async function runGymBattle(node, leader, maxGenId, aceTarget) {
-  const built = await buildBossTeam(leader.team, leader.type, maxGenId, aceTarget);
+  const built = await buildBossTeam(leader.team, leader.type, maxGenId, aceTarget, gymBuildOpts());
   const enemyTeam = built.map(p => ({
     ...createInstance(p, p.level, false, leader.moveTier ?? 1),
     heldItem: p.heldItem || null,
@@ -990,7 +1003,7 @@ async function doElite4() {
   for (let i = state.eliteIndex; i < bosses.length; i++) {
     state.eliteIndex = i;
     const boss = bosses[i];
-    const built = await buildBossTeam(boss.team, boss.type, 151, null);
+    const built = await buildBossTeam(boss.team, boss.type, 151, null, { fillerSpread: 1 });
     const enemyTeam = built.map(p => createInstance(p, p.level, false, 2));
 
     showScreen('battle-screen');
@@ -1019,7 +1032,7 @@ async function doBothElite4() {
     const slot = lineup[i];
     const member = (slot.gen === 3 ? GEN3_ELITE_4 : slot.gen === 2 ? GEN2_ELITE_4 : ELITE_4)[slot.idx];
     const target = Math.max(...ELITE_4[Math.min(i, ELITE_4.length - 1)].team.map(p => p.level));
-    const built = await buildBossTeam(member.team, member.type, 386, target);
+    const built = await buildBossTeam(member.team, member.type, 386, target, { fillerSpread: 1 });
     const enemyTeam = built.map(p => ({ ...createInstance(p, p.level, false, 2), heldItem: p.heldItem || null }));
 
     showScreen('battle-screen');
@@ -1176,7 +1189,7 @@ async function doEliteGauntlet(bosses, maxGenId, winAchievementId = null) {
         nextBoss: boss,
       });
     }
-    const built = await buildBossTeam(boss.team, boss.type, maxGenId, null);
+    const built = await buildBossTeam(boss.team, boss.type, maxGenId, null, { fillerSpread: 1 });
     const enemyTeam = built.map(p => ({ ...createInstance(p, p.level, false, 2), heldItem: p.heldItem || null }));
     showScreen('battle-screen');
     document.getElementById('battle-title').textContent = `${boss.title}: ${boss.name}!`;
@@ -2019,10 +2032,13 @@ async function doTrainerNode(node) {
     // Bigger enemy teams that scale with progress (harder): 2 early → up to 6.
     teamSize = Math.min(6, 2 + Math.floor(state.currentMap / 1.5));
   }
-  // Gen 2/3: random trainers run below the node level — -1 from map 2, -2 from
-  // map 3, -3 from map 5 onward. Gym leaders / rival / Elite 4 unaffected.
-  const trainerReduction = (state.gen2Mode || getRunGen() === '3')
-    ? (state.currentMap >= 4 ? 3 : state.currentMap >= 2 ? 2 : state.currentMap >= 1 ? 1 : 0)
+  // Difficulty linearization: trainers run −2/−1 below node level on the early
+  // maps (the team is small) and climb to +1 ABOVE it on maps 7-8, so late
+  // routes stay dangerous. Gym leaders / rival / Elite 4 unaffected.
+  const trainerReduction = state.isEndlessMode ? 0
+    : state.currentMap <= 1 ? 2
+    : state.currentMap <= 3 ? 1
+    : state.currentMap >= 6 ? -1
     : 0;
   const level = Math.max(1, getLevelForNode(node) - trainerReduction);
   const moveTier = getMoveТierForMap(state.currentMap);
