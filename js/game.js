@@ -2043,6 +2043,12 @@ const TRAINER_BATTLE_CONFIG = {
                  gen3Pool: [287,288,289,295,301,327,335,352,357] },
 };
 
+// Campaign trainer gradient (indexed by map): a lone low-level mon on the
+// first routes, growing to full six-mon squads at route-ladder level on the
+// road to the Elite Four. Gym leaders / rival / Elite 4 unaffected.
+const TRAINER_TEAM_SIZES    = [1, 2, 2, 3, 3, 4, 4, 5, 6];
+const TRAINER_LEVEL_OFFSETS = [-3, -2, -1, 0, 0, 0, 1, 1, 1];
+
 async function doTrainerNode(node) {
   const key = node.trainerSprite || 'aceTrainer';
   const config = TRAINER_BATTLE_CONFIG[key] || TRAINER_BATTLE_CONFIG.aceTrainer;
@@ -2052,17 +2058,11 @@ async function doTrainerNode(node) {
     const bossSize = ENDLESS_TEAM_SIZES[slot] ?? 4;
     teamSize = Math.max(1, bossSize - 1);
   } else {
-    // Bigger enemy teams that scale with progress (harder): 2 early → up to 6.
-    teamSize = Math.min(6, 2 + Math.floor(state.currentMap / 1.5));
+    teamSize = TRAINER_TEAM_SIZES[Math.min(state.currentMap, TRAINER_TEAM_SIZES.length - 1)];
   }
-  // Difficulty linearization: trainers run −2/−1 below node level on the early
-  // maps (the team is small) and climb to +1 ABOVE it on maps 7-8, so late
-  // routes stay dangerous. Gym leaders / rival / Elite 4 unaffected.
-  const trainerReduction = state.isEndlessMode ? 0
-    : state.currentMap <= 1 ? 1
-    : state.currentMap >= 6 ? -1
-    : 0;
-  const level = Math.max(1, getLevelForNode(node) - trainerReduction);
+  const levelOffset = state.isEndlessMode ? 0
+    : TRAINER_LEVEL_OFFSETS[Math.min(state.currentMap, TRAINER_LEVEL_OFFSETS.length - 1)];
+  const level = Math.max(1, getLevelForNode(node) + levelOffset);
   const moveTier = getMoveТierForMap(state.currentMap);
 
   let speciesList;
