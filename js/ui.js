@@ -680,7 +680,7 @@ function lungeAttacker(el, from, to, physical) {
   const d = Math.hypot(dx, dy) || 1;
   const reach = physical ? 36 : 16;
   const tx = (dx / d) * reach, ty = (dy / d) * reach;
-  const dur = (physical ? 430 : 340) / (typeof battleSpeedMultiplier !== 'undefined' ? battleSpeedMultiplier : 1);
+  const dur = (physical ? 580 : 470) / (typeof battleSpeedMultiplier !== 'undefined' ? battleSpeedMultiplier : 1);
   try {
     el.animate([
       { transform: 'translate(0,0) scale(1)' },
@@ -701,7 +701,7 @@ function chargeAttacker(el, moveType, tier = 1) {
   c.style.setProperty('--c', rgb);
   c.style.setProperty('--chs', String(1 + tier * 0.35)); // wind-up grows with tier
   el.appendChild(c);
-  setTimeout(() => c.remove(), 380 + tier * 90);
+  setTimeout(() => c.remove(), 500 + tier * 110);
 }
 
 
@@ -1215,14 +1215,14 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1) {
 
   if (isSpecial) {
     const TRAVEL = 0.52;
-    return runCanvas(canvas, ctx, Math.round(640 * E.dur), (c, t) => {
+    return runCanvas(canvas, ctx, Math.round(980 * E.dur), (c, t) => {
       if (t < TRAVEL) travel(t / TRAVEL);
       else impact((t - TRAVEL) / (1 - TRAVEL), tier >= 2);
     });
   }
   // Physical: type-coloured slashes rake the target, then a heavy shockwave.
   const STRIKE = 0.34;
-  return runCanvas(canvas, ctx, Math.round(500 * E.dur), (c, t) => {
+  return runCanvas(canvas, ctx, Math.round(760 * E.dur), (c, t) => {
     if (t < STRIKE) {
       const st = t / STRIKE;
       ctx.save();
