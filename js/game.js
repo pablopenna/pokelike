@@ -2044,10 +2044,13 @@ const TRAINER_BATTLE_CONFIG = {
 };
 
 // Campaign trainer gradient (indexed by map): a lone low-level mon on the
-// first routes, growing to full six-mon squads at route-ladder level on the
-// road to the Elite Four. Gym leaders / rival / Elite 4 unaffected.
+// first routes, growing to full six-mon squads on the road to the Elite Four.
+// Levels stay BELOW the route ladder everywhere — the growing squad size is
+// what carries the late-game challenge (route fights must stay clearly
+// winnable one by one; the walls are the gyms/E4, which run full-strength
+// teams with items). Simulated winrates decline ~100% → ~78% across maps.
 const TRAINER_TEAM_SIZES    = [1, 2, 2, 3, 3, 4, 4, 5, 6];
-const TRAINER_LEVEL_OFFSETS = [-3, -2, -1, 0, 0, 0, 1, 1, 1];
+const TRAINER_LEVEL_OFFSETS = [-3, -2, -1, -1, -1, -1, -1, -2, -4];
 
 async function doTrainerNode(node) {
   const key = node.trainerSprite || 'aceTrainer';
