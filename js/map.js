@@ -166,10 +166,13 @@ function generateMap(mapIndex, nuzlockeMode = false, gen2Mode = false) {
     const size = CONTENT_SIZES[ci];
     const layer = Array.from({ length: size }, (_, c) => makeNode(`n${l}_${c}`, pickType(ci), l, c));
 
-    // Guarantee a single pokecenter, in the last content layer only (before the boss).
-    if (ci === contentCount - 1 && !layer.some(n => n.type === NODE_TYPES.POKECENTER)) {
+    // Guarantee a pokecenter near the boss AND one mid-map (the ladder now
+    // climbs to the cap, so the back half needs a breather).
+    const isMidLayer = ci === Math.floor(contentCount / 2);
+    if ((ci === contentCount - 1 || isMidLayer) && !layer.some(n => n.type === NODE_TYPES.POKECENTER)) {
       const idx = Math.floor(rng() * size);
       layer[idx].type = NODE_TYPES.POKECENTER;
+      delete layer[idx].trainerSprite;
     }
 
     layers.push(layer);

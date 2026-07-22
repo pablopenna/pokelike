@@ -628,7 +628,10 @@ function applyLevelGain(team, bagItems, participantIdxs, maxEnemyLevel = 0, hard
     // to ever field again.
 
     const luckyBonus = p.heldItem?.id === 'lucky_egg' && rng() < 0.30 ? 1 : 0;
-    const gain = baseGain + luckyBonus;
+    // Fainted members still progress but one level slower (min +1): keeping
+    // your team alive earns a real edge, without the old death spiral.
+    const rawGain = baseGain + luckyBonus;
+    const gain = p.currentHp > 0 ? rawGain : Math.max(1, rawGain - 1);
     const oldLevel = p.level;
     const newLevel = Math.min(oldLevel + gain, levelCap);
     if (newLevel <= oldLevel) continue; // already at/over cap — never demote

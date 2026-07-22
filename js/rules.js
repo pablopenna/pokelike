@@ -84,8 +84,9 @@ const POKELIKE_RULES = {
     auto: "An Auto button lets the AI play your turns.",
     xp_rewards: { wild: 1, trainer: 2, gym: 3 },
     xp_note:
-      "The WHOLE team shares XP — fainted Pokémon included, so nobody falls behind. A dynamic per-map " +
-      "level cap prevents over-leveling so bosses stay a threat.",
+      "The WHOLE team shares XP; fainted members earn one level less (min +1), so nobody falls behind " +
+      "but staying alive pays. A dynamic per-map level cap prevents over-leveling so bosses stay a threat. " +
+      "Route levels climb from the map's minimum up to the cap, so pressure holds until the gym.",
   },
 
   bosses: {
@@ -188,7 +189,7 @@ const _GUIDE_SECTIONS = [
     <ul>
       <li><b>⚔ Wild battle</b> (+1 level) · <b>⚑ Trainer</b> (+2 levels, themed teams) · <b>♛ Gym</b> (+3 levels)</li>
       <li><b>⬟ Catch</b> — recruit a wild Pokémon · <b>✦ Item</b> · <b>? Random event</b></li>
-      <li><b>+ Pokémon Center</b> — one full heal per map, place it wisely</li>
+      <li><b>+ Pokémon Center</b> — two guaranteed full heals per map: one mid-map, one before the gym</li>
       <li><b>♪ Move Tutor</b> — upgrade a move's power tier (at least 2 per map, guaranteed) ·
       <b>⇄ Trade</b> — swap a Pokémon for one 3 levels higher</li>
       <li><b>⚝ Legendary</b> — beat it to recruit it (maps 6+)</li>
@@ -212,8 +213,9 @@ const _GUIDE_SECTIONS = [
     </ul>` },
   { id: 'team', icon: '📈', title: 'Team & XP', html: `
     <ul>
-      <li><b>The whole team shares XP — fainted Pokémon included</b>, so nobody falls behind. Wild +1,
-      trainer +2, gym +3, rival +4, capped at the map's level cap.</li>
+      <li><b>The whole team shares XP</b> — wild +1, trainer +2, gym +3, rival +4, capped at the map's
+      level cap. Fainted Pokémon still earn XP but one level less (min +1): nobody falls behind, but
+      keeping your team alive pays.</li>
       <li>Fainted Pokémon revive automatically when you reach the next map; mid-map use a Pokémon Center,
       a Max Revive, or win a rival battle.</li>
       <li>Pokémon <b>evolve</b> at their level thresholds (branching lines let you choose the form).</li>

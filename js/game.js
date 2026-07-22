@@ -882,22 +882,27 @@ function getLevelForNode(node) {
   // reduction) produced level-1 wilds against a level-5 starter. Early nodes
   // never drop below 3 (catch nodes already floor at 4).
   const _mapFloor = state.currentMap === 0 ? 3 : 1;
-  // Gen 2/3: deterministic per-layer curve. Layers 1-7 use fixed offsets so each
-  // map reads cleanly as Lv mapMin..mapMin+9 (e.g. 1,2,3,5,6,8,9 in map 1, gym
-  // at 10). Boss layer 8 uses leader data, not this function.
+  // The ladder's CEILING is the map's level cap (the leader's ace), not the
+  // nominal 10-level band — otherwise the second half of every map fell far
+  // below the player (e.g. map 5: nodes 41-49 vs a cap of 59) and turned into
+  // a tension-free farming stroll. Nodes now climb mapMin → cap−1.
+  const _ceil = Math.max(getLevelCapForMap() - 1, 1);
+  // Gen 2/3: deterministic per-layer curve — fixed offsets scaled onto the
+  // mapMin..cap−1 span. Boss layer 8 uses leader data, not this function.
   const _runGen = getRunGen();
   if (_runGen === '2' || _runGen === '3') {
-    const [minL, maxL] = (_runGen === '3' ? GEN3_MAP_LEVEL_RANGES : GEN2_MAP_LEVEL_RANGES)[state.currentMap];
-    if (node.layer >= GEN2_LAYER_OFFSETS.length + 1) return maxL;
+    const [minL] = (_runGen === '3' ? GEN3_MAP_LEVEL_RANGES : GEN2_MAP_LEVEL_RANGES)[state.currentMap];
+    const span = Math.max(0, _ceil - minL);
+    if (node.layer >= GEN2_LAYER_OFFSETS.length + 1) return _ceil;
     const layerIdx = Math.min(GEN2_LAYER_OFFSETS.length, Math.max(1, node.layer)) - 1;
-    return Math.min(maxL, Math.max(_mapFloor, minL + GEN2_LAYER_OFFSETS[layerIdx]));
+    return Math.min(_ceil, Math.max(_mapFloor, minL + Math.round(GEN2_LAYER_OFFSETS[layerIdx] * span / 9)));
   }
   // Non-gen2/3: spread levels evenly across layers 1..7 (highest non-boss layer).
-  const [minL, maxL] = MAP_LEVEL_RANGES[state.currentMap];
+  const [minL] = MAP_LEVEL_RANGES[state.currentMap];
   const t = Math.min(1, Math.max(0, (node.layer - 1) / 6));
-  const base = Math.round(minL + t * (maxL - minL));
-  const spread = Math.max(1, Math.round((maxL - minL) / 8));
-  return Math.min(maxL, Math.max(_mapFloor, Math.max(minL, base + Math.floor(rng() * spread))));
+  const base = Math.round(minL + t * (_ceil - minL));
+  const spread = Math.max(1, Math.round((_ceil - minL) / 8));
+  return Math.min(_ceil, Math.max(_mapFloor, Math.max(minL, base + Math.floor(rng() * spread))));
 }
 
 async function doBattleNode(node) {
@@ -957,9 +962,15 @@ async function doBattleNode(node) {
 // from map 4) so the player's young team isn't outnumbered 6-to-2, and later
 // gyms tighten their filler toward the ace so it stays a threat.
 function gymBuildOpts() {
-  // Full-power gyms: always 6 Pokémon, filler AT the ace's level, everyone
-  // holding an item (filler leans toward the leader's type-boost item).
-  return { teamSize: 6, fillerSpread: 0, equipFiller: true };
+  // Rosters grow with the player's young team (3/4/5, full 6 from map 4) but
+  // every member fights AT the ace's level and holds an item (filler leans
+  // toward the leader's type-boost item). Elite fights are always 6.
+  const m = state.currentMap;
+  return {
+    teamSize: m === 0 ? 3 : m === 1 ? 4 : m === 2 ? 5 : 6,
+    fillerSpread: 0,
+    equipFiller: true,
+  };
 }
 
 async function runGymBattle(node, leader, maxGenId, aceTarget) {
