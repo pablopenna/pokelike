@@ -678,7 +678,7 @@ function lungeAttacker(el, from, to, physical) {
   if (!el || !el.animate) return;
   const dx = to.x - from.x, dy = to.y - from.y;
   const d = Math.hypot(dx, dy) || 1;
-  const reach = physical ? 36 : 16;
+  const reach = physical ? Math.min(96, d * 0.45) : 16;
   const tx = (dx / d) * reach, ty = (dy / d) * reach;
   const dur = (physical ? 580 : 470) / (typeof battleSpeedMultiplier !== 'undefined' ? battleSpeedMultiplier : 1);
   try {
@@ -757,7 +757,7 @@ const TIER_FX = [
   { scale: 1.45, count: 1.8,  dur: 1.3,  rings: 4, flashA: 0.40, extra: 1 },
 ];
 
-function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1) {
+function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, attackerEl = null, targetEl = null) {
   const fx  = ELEMENT_FX[type] || ELEMENT_FX.normal;
   const rgb = TYPE_COLORS_RGB[type] || '200,200,200';
   const E   = TIER_FX[Math.max(0, Math.min(2, tier))] || TIER_FX[1];
@@ -1220,16 +1220,95 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1) {
       else impact((t - TRAVEL) / (1 - TRAVEL), tier >= 2);
     });
   }
-  // Physical: type-coloured slashes rake the target, then a heavy shockwave.
-  const STRIKE = 0.34;
-  return runCanvas(canvas, ctx, Math.round(760 * E.dur), (c, t) => {
-    if (t < STRIKE) {
-      const st = t / STRIKE;
+  // Physical: a readable body blow — the attacker DASHES in (sprite
+  // afterimages streak along the path), a jagged white contact star freezes
+  // the hit, the victim is knocked back, then type-coloured slashes and a
+  // heavy shockwave finish it.
+  const DASH = 0.30, CONTACT = 0.46;
+  const spriteImg = attackerEl && attackerEl.querySelector && attackerEl.querySelector('.battle-sprite');
+  const flipped = !!(attackerEl && attackerEl.closest && attackerEl.closest('#player-side'));
+  const starPts = Array.from({ length: 12 }, (_, i) => (i % 2 ? 0.45 : 1) * (0.85 + R[10 + (i % 8)] * 0.3));
+  const durMs = Math.round(760 * E.dur);
+  // Knockback on the victim, timed to the contact frame.
+  if (targetEl && targetEl.animate) {
+    setTimeout(() => {
+      try {
+        targetEl.animate([
+          { transform: 'translate(0,0)' },
+          { transform: `translate(${(nx * 18).toFixed(1)}px, ${(ny * 12).toFixed(1)}px)`, offset: 0.35 },
+          { transform: 'translate(0,0)' },
+        ], { duration: 340 / battleSpeedMultiplier, easing: 'cubic-bezier(0.2,0.8,0.4,1)' });
+      } catch {}
+    }, (durMs * DASH) / battleSpeedMultiplier);
+  }
+  return runCanvas(canvas, ctx, durMs, (c, t) => {
+    ctx.save();
+    if (t < DASH) {
+      // ── dash: sprite afterimages + speed lines racing at the target ──
+      const st = t / DASH;
+      const head = Math.min(1, st * 1.15);
+      ctx.globalCompositeOperation = 'source-over';
+      if (spriteImg && spriteImg.complete && spriteImg.naturalWidth > 0) {
+        const r2 = spriteImg.getBoundingClientRect();
+        for (let k = 3; k >= 0; k--) {
+          const gt = head - k * 0.16; if (gt <= 0) continue;
+          const gx = from.x + dx * gt * 0.82, gy = from.y + dy * gt * 0.82;
+          ctx.save();
+          ctx.globalAlpha = k === 0 ? 0.9 : 0.45 - k * 0.1;
+          ctx.translate(gx, gy);
+          if (flipped) ctx.scale(-1, 1);
+          try { ctx.drawImage(spriteImg, -r2.width / 2, -r2.height / 2, r2.width, r2.height); } catch {}
+          ctx.restore();
+        }
+      }
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = `rgba(${rgb},0.75)`; ctx.lineCap = 'round';
+      for (let k = 0; k < 5; k++) { // speed lines hugging the dash path
+        const off2 = (k - 2) * 11;
+        const t0 = Math.max(0, head - 0.3), t1 = head;
+        ctx.lineWidth = 3 - Math.abs(k - 2) * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(from.x + dx * t0 * 0.82 + px * off2, from.y + dy * t0 * 0.82 + py * off2);
+        ctx.lineTo(from.x + dx * t1 * 0.82 + px * off2, from.y + dy * t1 * 0.82 + py * off2);
+        ctx.stroke();
+      }
+    } else if (t < CONTACT) {
+      // ── CONTACT: jagged white impact star + hit-stop flash ──
+      const ct2 = (t - DASH) / (CONTACT - DASH);
+      const pop = ct2 < 0.4 ? ct2 / 0.4 : 1;
+      const SR = (34 + tier * 10) * E.scale * pop;
+      ctx.globalCompositeOperation = 'lighter';
       ctx.save();
+      ctx.translate(to.x, to.y);
+      ctx.rotate(R[9] * 6.28);
+      ctx.beginPath();
+      starPts.forEach((m2, i) => {
+        const a2 = (i / starPts.length) * Math.PI * 2;
+        const rr = SR * m2;
+        i === 0 ? ctx.moveTo(Math.cos(a2) * rr, Math.sin(a2) * rr) : ctx.lineTo(Math.cos(a2) * rr, Math.sin(a2) * rr);
+      });
+      ctx.closePath();
+      ctx.fillStyle = `rgba(255,255,255,${0.95 - ct2 * 0.3})`;
+      ctx.fill();
+      ctx.strokeStyle = `rgba(${rgb},${0.9 - ct2 * 0.3})`; ctx.lineWidth = 3; ctx.stroke();
+      ctx.restore();
+      // radial burst lines around the star
+      ctx.strokeStyle = `rgba(255,255,255,${0.8 * (1 - ct2)})`; ctx.lineWidth = 2;
+      for (let s2 = 0; s2 < 8; s2++) {
+        const a3 = R[9] * 6.28 + (s2 / 8) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(to.x + Math.cos(a3) * SR * 0.9, to.y + Math.sin(a3) * SR * 0.9);
+        ctx.lineTo(to.x + Math.cos(a3) * (SR * 0.9 + 26 * pop), to.y + Math.sin(a3) * (SR * 0.9 + 26 * pop));
+        ctx.stroke();
+      }
+    } else {
+      // ── follow-through: type slashes + heavy shockwave burst ──
+      const ft = (t - CONTACT) / (1 - CONTACT);
+      ctx.globalCompositeOperation = 'lighter';
       ctx.shadowColor = `rgba(${rgb},0.9)`; ctx.shadowBlur = 14 * E.scale;
       for (const s of slashes) {
-        const lt = (st - s.delay) / 0.4; if (lt <= 0 || lt > 1) continue;
-        const swipe = (lt - 0.5) * 2; // -1 → 1 across the target
+        const lt = (ft - s.delay) / 0.4; if (lt <= 0 || lt > 1) continue;
+        const swipe = (lt - 0.5) * 2;
         const cx2 = to.x + Math.cos(s.ang) * swipe * s.len;
         const cy2 = to.y + Math.sin(s.ang) * swipe * s.len;
         const tx2 = to.x + Math.cos(s.ang) * Math.max(-1, swipe - 0.7) * s.len;
@@ -1239,21 +1318,21 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1) {
         ctx.strokeStyle = g; ctx.lineWidth = 7 * E.scale; ctx.lineCap = 'round';
         ctx.beginPath(); ctx.moveTo(tx2, ty2); ctx.lineTo(cx2, cy2); ctx.stroke();
       }
-      // Tier-2 physicals carve a bright X-flash right before detonation
-      if (tier >= 2 && st > 0.7) {
-        const xa = (st - 0.7) / 0.3;
-        ctx.strokeStyle = `rgba(255,255,255,${xa * 0.9})`; ctx.lineWidth = 5;
+      ctx.shadowBlur = 0;
+      impact(ft, true);
+      // Tier-2 physicals carve a bright X-flash mid-burst
+      if (tier >= 2 && ft > 0.25 && ft < 0.7) {
+        const xa = (ft - 0.25) / 0.45;
+        ctx.strokeStyle = `rgba(255,255,255,${(1 - xa) * 0.9})`; ctx.lineWidth = 5;
         for (const ang of [0.6, 2.2]) {
           ctx.beginPath();
-          ctx.moveTo(to.x - Math.cos(ang) * 55 * xa, to.y - Math.sin(ang) * 55 * xa);
-          ctx.lineTo(to.x + Math.cos(ang) * 55 * xa, to.y + Math.sin(ang) * 55 * xa);
+          ctx.moveTo(to.x - Math.cos(ang) * 60 * xa, to.y - Math.sin(ang) * 60 * xa);
+          ctx.lineTo(to.x + Math.cos(ang) * 60 * xa, to.y + Math.sin(ang) * 60 * xa);
           ctx.stroke();
         }
       }
-      ctx.restore();
-    } else {
-      impact((t - STRIKE) / (1 - STRIKE), true);
     }
+    ctx.restore();
   });
 }
 
@@ -1276,7 +1355,7 @@ function playAttackAnimation(moveType, attackerEl, targetEl, isSpecial = true, m
   if (moveName === 'Splash')   return animSplash(canvas, ctx, from, to);
   if (moveName === 'Teleport') return animTeleport(canvas, ctx, from, to);
 
-  return animElementalAttack(canvas, ctx, from, to, (moveType || 'normal').toLowerCase(), isSpecial, tier);
+  return animElementalAttack(canvas, ctx, from, to, (moveType || 'normal').toLowerCase(), isSpecial, tier, attackerEl, targetEl);
 }
 
 /* ── particle factories ── */
