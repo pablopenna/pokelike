@@ -693,14 +693,15 @@ function lungeAttacker(el, from, to, physical) {
 
 // Type-coloured energy gather on the attacker just before a move fires — a
 // telegraphed wind-up layered on top of every move's own animation.
-function chargeAttacker(el, moveType) {
+function chargeAttacker(el, moveType, tier = 1) {
   if (!el) return;
   const rgb = TYPE_COLORS_RGB[(moveType || 'normal').toLowerCase()] || '200,200,200';
   const c = document.createElement('div');
   c.className = 'attack-charge';
   c.style.setProperty('--c', rgb);
+  c.style.setProperty('--chs', String(1 + tier * 0.35)); // wind-up grows with tier
   el.appendChild(c);
-  setTimeout(() => c.remove(), 380);
+  setTimeout(() => c.remove(), 380 + tier * 90);
 }
 
 
@@ -732,9 +733,34 @@ const ELEMENT_FX = {
   fairy:    { motion: 'spiral', burst: 'stars'    },
 };
 
-function animElementalAttack(canvas, ctx, from, to, type, isSpecial) {
+// Move tier lookup: each type's MOVE_POOL lists its physical/special moves in
+// tier order, and names are unique — so the animators can recover a move's
+// tier (0..2) from the attack event's moveName with no engine/schema changes.
+const MOVE_TIER_BY_NAME = (() => {
+  const m = { Struggle: 0, Tackle: 0 };
+  try {
+    for (const pools of Object.values(MOVE_POOL)) {
+      for (const cat of ['physical', 'special']) {
+        (pools[cat] || []).forEach((mv, i) => { m[mv.name] = i; });
+      }
+    }
+  } catch {}
+  return m;
+})();
+
+// Epicness per tier: T0 restrained, T1 the baseline, T2 a full spectacle —
+// more instances and particles, bigger and faster everything, longer runtime,
+// extra shockwave rings, a screen flash and a lingering secondary burst.
+const TIER_FX = [
+  { scale: 0.8,  count: 0.65, dur: 0.85, rings: 1, flashA: 0.10, extra: 0 },
+  { scale: 1.0,  count: 1.0,  dur: 1.0,  rings: 2, flashA: 0.22, extra: 0 },
+  { scale: 1.45, count: 1.8,  dur: 1.3,  rings: 4, flashA: 0.40, extra: 1 },
+];
+
+function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1) {
   const fx  = ELEMENT_FX[type] || ELEMENT_FX.normal;
   const rgb = TYPE_COLORS_RGB[type] || '200,200,200';
+  const E   = TIER_FX[Math.max(0, Math.min(2, tier))] || TIER_FX[1];
   const dx = to.x - from.x, dy = to.y - from.y;
   const dist = Math.hypot(dx, dy) || 1;
   const nx = dx / dist, ny = dy / dist;
@@ -743,7 +769,8 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial) {
   // ── per-cast randomness, rolled ONCE so frames stay coherent ──
   const R = Array.from({ length: 48 }, () => Math.random());
   const arcMag = dist * (0.12 + R[0] * 0.25) * (R[1] < 0.5 ? -1 : 1);
-  const boltVariants = Array.from({ length: 5 }, () => {
+  const boltCount = 1 + (tier >= 1 ? 0 : 0) + (tier >= 2 ? 2 : 0);
+  const boltVariants = Array.from({ length: 5 + tier * 2 }, () => {
     const segs = 7, pts = [];
     for (let s = 0; s <= segs; s++) {
       const t = s / segs;
@@ -752,21 +779,26 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial) {
     }
     return pts;
   });
-  const burstVecs = Array.from({ length: 26 }, (_, i) => {
-    const ang = (i / 26) * Math.PI * 2 + R[2] * 6.28;
-    const sp = 30 + Math.random() * 80;
-    return { ax: Math.cos(ang) * sp, ay: Math.sin(ang) * sp, sz: 2 + Math.random() * 5, ph: Math.random() * 6.28 };
+  const burstN = Math.round(26 * E.count);
+  const burstVecs = Array.from({ length: burstN }, (_, i) => {
+    const ang = (i / burstN) * Math.PI * 2 + R[2] * 6.28;
+    const sp = (30 + Math.random() * 80) * E.scale;
+    return { ax: Math.cos(ang) * sp, ay: Math.sin(ang) * sp, sz: (2 + Math.random() * 5) * E.scale, ph: Math.random() * 6.28 };
   });
-  const slashes = Array.from({ length: 3 }, (_, i) => ({
-    ang: R[3] * Math.PI + i * (Math.PI / 3) + (Math.random() - 0.5) * 0.5,
-    len: 46 + Math.random() * 30,
-    delay: i * 0.09,
+  const slashN = 3 + tier;
+  const slashes = Array.from({ length: slashN }, (_, i) => ({
+    ang: R[3] * Math.PI + i * (Math.PI / slashN) + (Math.random() - 0.5) * 0.5,
+    len: (46 + Math.random() * 30) * E.scale,
+    delay: i * (0.28 / slashN),
   }));
+  // Side projectiles for T2 comets/shards (a volley instead of a lone shot)
+  const sideOffsets = tier >= 2 ? [-26, 26] : [];
 
-  const path = t => ({
-    x: from.x + dx * t + px * arcMag * Math.sin(Math.PI * t),
-    y: from.y + dy * t + py * arcMag * Math.sin(Math.PI * t),
+  const pathAt = (t, off = 0) => ({
+    x: from.x + dx * t + px * (arcMag * Math.sin(Math.PI * t) + off),
+    y: from.y + dy * t + py * (arcMag * Math.sin(Math.PI * t) + off),
   });
+  const path = t => pathAt(t, 0);
   const lobPath = t => ({
     x: from.x + dx * t,
     y: from.y + dy * t - (dist * 0.35) * Math.sin(Math.PI * t),
@@ -778,72 +810,81 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial) {
     g.addColorStop(1, `rgba(${edge},0)`);
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
   };
-  const tailStroke = (headT, span, width, alpha) => {
+  const tailStroke = (headT, span, width, alpha, off = 0) => {
     const t0 = Math.max(0, headT - span);
-    const g0 = path(t0), g1 = path(headT);
+    const g0 = pathAt(t0, off), g1 = pathAt(headT, off);
     const g = ctx.createLinearGradient(g0.x, g0.y, g1.x, g1.y);
     g.addColorStop(0, `rgba(${rgb},0)`); g.addColorStop(1, `rgba(${rgb},${alpha})`);
     ctx.beginPath();
-    for (let s = 0; s <= 12; s++) { const p = path(t0 + (headT - t0) * s / 12); s === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); }
+    for (let s = 0; s <= 12; s++) { const p = pathAt(t0 + (headT - t0) * s / 12, off); s === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); }
     ctx.strokeStyle = g; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.stroke();
   };
 
   // ── travel renderers (special phase 1) ──
   const travel = (st) => {
     ctx.save();
-    ctx.shadowColor = `rgba(${rgb},0.85)`; ctx.shadowBlur = 18;
+    ctx.shadowColor = `rgba(${rgb},0.85)`; ctx.shadowBlur = 18 * E.scale;
     switch (fx.motion) {
       case 'comet': {
-        const p = path(st);
-        tailStroke(st, 0.3, 10, 0.9);
-        glowDot(p.x, p.y, 22, '255,255,230', rgb, 1);
-        for (let k = 0; k < 5; k++) { // spark specks shed behind
+        for (const off of [0, ...sideOffsets]) {
+          const lag = off === 0 ? 0 : 0.08;
+          const tt = st - lag; if (tt <= 0) continue;
+          const p = pathAt(tt, off);
+          tailStroke(tt, 0.3, (off === 0 ? 10 : 6) * E.scale, off === 0 ? 0.9 : 0.6, off);
+          glowDot(p.x, p.y, (off === 0 ? 22 : 13) * E.scale, '255,255,230', rgb, 1);
+        }
+        for (let k = 0; k < Math.round(5 * E.count); k++) { // spark specks shed behind
           const sp = path(Math.max(0, st - 0.05 - k * 0.045));
-          glowDot(sp.x + px * Math.sin(st * 20 + k) * 8, sp.y + py * Math.cos(st * 17 + k) * 8, 4, rgb, rgb, 0.6 - k * 0.1);
+          glowDot(sp.x + px * Math.sin(st * 20 + k) * 8, sp.y + py * Math.cos(st * 17 + k) * 8, 4 * E.scale, rgb, rgb, 0.6 - k * 0.08);
         }
         break;
       }
       case 'wave': {
-        for (let s = 0; s < 3; s++) {
-          const off = (s - 1) * 14;
+        const streams = 3 + tier;
+        for (let s = 0; s < streams; s++) {
+          const off = (s - (streams - 1) / 2) * 14;
           for (let d2 = 0; d2 < 6; d2++) {
             const tt = st - d2 * 0.055; if (tt <= 0) continue;
             const b = path(tt);
             const wob = Math.sin(tt * 22 + s * 2) * 9;
-            glowDot(b.x + px * (off + wob), b.y + py * (off + wob), 7 - d2, '230,248,255', rgb, 0.95 - d2 * 0.14);
+            glowDot(b.x + px * (off + wob), b.y + py * (off + wob), (7 - d2) * E.scale, '230,248,255', rgb, 0.95 - d2 * 0.14);
           }
         }
         break;
       }
       case 'bolt': {
-        const v = boltVariants[Math.floor(st * 14) % boltVariants.length];
-        const upTo = Math.max(2, Math.ceil(v.length * Math.min(1, st * 2.2)));
-        ctx.strokeStyle = `rgba(255,255,240,0.95)`; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-        ctx.beginPath(); v.slice(0, upTo).forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)); ctx.stroke();
-        ctx.strokeStyle = `rgba(${rgb},0.7)`; ctx.lineWidth = 9; ctx.stroke();
+        for (let bIdx = 0; bIdx < boltCount; bIdx++) {
+          const v = boltVariants[(Math.floor(st * 14) + bIdx * 2) % boltVariants.length];
+          const upTo = Math.max(2, Math.ceil(v.length * Math.min(1, st * 2.2)));
+          ctx.strokeStyle = `rgba(255,255,240,${0.95 - bIdx * 0.25})`; ctx.lineWidth = 4 * E.scale; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+          ctx.beginPath(); v.slice(0, upTo).forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)); ctx.stroke();
+          ctx.strokeStyle = `rgba(${rgb},${0.7 - bIdx * 0.2})`; ctx.lineWidth = 9 * E.scale; ctx.stroke();
+        }
         break;
       }
       case 'leaves': {
-        for (let k = 0; k < 5; k++) {
-          const tt = st - k * 0.06; if (tt <= 0) continue;
+        const n = Math.round(5 * E.count);
+        for (let k = 0; k < n; k++) {
+          const tt = st - k * (0.3 / n); if (tt <= 0) continue;
           const b = path(tt);
           const sway = Math.sin(tt * 14 + k * 1.7) * 13;
           const lx = b.x + px * sway, ly = b.y + py * sway;
           ctx.save(); ctx.translate(lx, ly); ctx.rotate(tt * 12 + k);
-          ctx.beginPath(); ctx.ellipse(0, 0, 9, 4, 0, 0, Math.PI * 2);
+          ctx.beginPath(); ctx.ellipse(0, 0, 9 * E.scale, 4 * E.scale, 0, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(${rgb},0.95)`; ctx.fill();
           ctx.strokeStyle = 'rgba(240,255,220,0.8)'; ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(-8 * E.scale, 0); ctx.lineTo(8 * E.scale, 0); ctx.stroke();
           ctx.restore();
         }
         break;
       }
       case 'shards': {
-        for (let k = 0; k < 4; k++) {
-          const off = (k - 1.5) * 13, tt = st - k * 0.04; if (tt <= 0) continue;
+        const n = 4 + tier * 2;
+        for (let k = 0; k < n; k++) {
+          const off = (k - (n - 1) / 2) * 13, tt = st - k * 0.03; if (tt <= 0) continue;
           const b = { x: from.x + dx * tt + px * off, y: from.y + dy * tt + py * off };
           ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(Math.atan2(dy, dx));
-          ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-8, -4); ctx.lineTo(-8, 4); ctx.closePath();
+          ctx.beginPath(); ctx.moveTo(12 * E.scale, 0); ctx.lineTo(-8 * E.scale, -4 * E.scale); ctx.lineTo(-8 * E.scale, 4 * E.scale); ctx.closePath();
           ctx.fillStyle = `rgba(${rgb},0.95)`; ctx.fill();
           ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.4; ctx.stroke();
           ctx.restore();
@@ -851,120 +892,137 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial) {
         break;
       }
       case 'lob': {
-        const p = lobPath(st);
-        if (type === 'rock') {
-          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(st * 9);
-          ctx.beginPath();
-          for (let s = 0; s < 7; s++) { const a2 = (s / 7) * Math.PI * 2; const r = 11 + ((s * 37) % 5); ctx.lineTo(Math.cos(a2) * r, Math.sin(a2) * r); }
-          ctx.closePath(); ctx.fillStyle = `rgba(${rgb},0.98)`; ctx.fill();
-          ctx.strokeStyle = 'rgba(70,50,25,0.9)'; ctx.lineWidth = 2; ctx.stroke();
-          ctx.restore();
-        } else {
-          glowDot(p.x, p.y, 15, '230,180,255', rgb, 1);
-          glowDot(p.x + 6, p.y + 8, 6, rgb, rgb, 0.8); // dripping glob
+        for (const off of [0, ...sideOffsets]) {
+          const tt = st - (off === 0 ? 0 : 0.09); if (tt <= 0) continue;
+          const p = { x: lobPath(tt).x + px * off * 0.4, y: lobPath(tt).y + py * off * 0.4 };
+          if (type === 'rock') {
+            ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(tt * 9);
+            ctx.beginPath();
+            for (let s = 0; s < 7; s++) { const a2 = (s / 7) * Math.PI * 2; const r = (11 + ((s * 37) % 5)) * (off === 0 ? E.scale : E.scale * 0.7); ctx.lineTo(Math.cos(a2) * r, Math.sin(a2) * r); }
+            ctx.closePath(); ctx.fillStyle = `rgba(${rgb},0.98)`; ctx.fill();
+            ctx.strokeStyle = 'rgba(70,50,25,0.9)'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.restore();
+          } else {
+            glowDot(p.x, p.y, 15 * (off === 0 ? E.scale : E.scale * 0.6), '230,180,255', rgb, 1);
+            glowDot(p.x + 6, p.y + 8, 6 * E.scale, rgb, rgb, 0.8); // dripping glob
+          }
         }
         break;
       }
       case 'quake': {
         const reach = st;
-        for (let s = 0; s < 8; s++) {
-          const tt = s / 8; if (tt > reach) break;
+        const n = Math.round(8 * E.count);
+        for (let s = 0; s < n; s++) {
+          const tt = s / n; if (tt > reach) break;
           const b = { x: from.x + dx * tt, y: Math.max(from.y, to.y) + 14 };
-          const h = 16 * Math.sin(Math.min(1, (reach - tt) * 5) * Math.PI);
+          const h = 16 * E.scale * Math.sin(Math.min(1, (reach - tt) * 5) * Math.PI);
           if (h <= 0) continue;
-          ctx.beginPath(); ctx.moveTo(b.x - 7, b.y); ctx.lineTo(b.x, b.y - h - 8); ctx.lineTo(b.x + 7, b.y); ctx.closePath();
+          ctx.beginPath(); ctx.moveTo(b.x - 7 * E.scale, b.y); ctx.lineTo(b.x, b.y - h - 8); ctx.lineTo(b.x + 7 * E.scale, b.y); ctx.closePath();
           ctx.fillStyle = `rgba(${rgb},0.9)`; ctx.fill();
-          glowDot(b.x, b.y - 4, 10, rgb, '90,60,20', 0.5);
+          glowDot(b.x, b.y - 4, 10 * E.scale, rgb, '90,60,20', 0.5);
         }
         break;
       }
       case 'gust': {
-        for (let k = 0; k < 3; k++) {
-          const tt = st - k * 0.07; if (tt <= 0) continue;
+        const n = 3 + tier;
+        for (let k = 0; k < n; k++) {
+          const tt = st - k * 0.06; if (tt <= 0) continue;
           const b = path(tt);
-          ctx.strokeStyle = `rgba(${rgb},${0.9 - k * 0.22})`; ctx.lineWidth = 4 - k;
-          ctx.beginPath(); ctx.arc(b.x, b.y, 16 + k * 7, tt * 9, tt * 9 + Math.PI * 1.2); ctx.stroke();
+          ctx.strokeStyle = `rgba(${rgb},${0.9 - k * 0.18})`; ctx.lineWidth = (4 - k * 0.6) * E.scale;
+          ctx.beginPath(); ctx.arc(b.x, b.y, (16 + k * 7) * E.scale, tt * 9, tt * 9 + Math.PI * 1.2); ctx.stroke();
         }
         break;
       }
       case 'rings': {
-        for (let k = 0; k < 3; k++) {
-          const tt = st - k * 0.09; if (tt <= 0) continue;
+        const n = 3 + tier;
+        for (let k = 0; k < n; k++) {
+          const tt = st - k * 0.08; if (tt <= 0) continue;
           const b = path(tt);
-          ctx.strokeStyle = `rgba(${rgb},${0.85 - k * 0.2})`; ctx.lineWidth = 3;
-          ctx.beginPath(); ctx.arc(b.x, b.y, 9 + Math.sin(tt * 18) * 4 + k * 5, 0, Math.PI * 2); ctx.stroke();
+          ctx.strokeStyle = `rgba(${rgb},${0.85 - k * 0.16})`; ctx.lineWidth = 3 * E.scale;
+          ctx.beginPath(); ctx.arc(b.x, b.y, (9 + Math.sin(tt * 18) * 4 + k * 5) * E.scale, 0, Math.PI * 2); ctx.stroke();
         }
         const hp = path(st);
-        glowDot(hp.x, hp.y, 12, '255,220,245', rgb, 0.9);
+        glowDot(hp.x, hp.y, 12 * E.scale, '255,220,245', rgb, 0.9);
         break;
       }
       case 'zigzag': {
         const zig = t2 => ({ x: from.x + dx * t2 + px * (Math.sin(t2 * 26) * dist * 0.09), y: from.y + dy * t2 + py * (Math.sin(t2 * 26) * dist * 0.09) });
-        for (let k = 0; k < 4; k++) {
-          const tt = st - k * 0.035; if (tt <= 0) continue;
+        const n = Math.round(4 * E.count);
+        for (let k = 0; k < n; k++) {
+          const tt = st - k * 0.03; if (tt <= 0) continue;
           const b = zig(tt);
-          glowDot(b.x, b.y, 9 - k * 1.6, '240,255,220', rgb, 0.9 - k * 0.2);
+          glowDot(b.x, b.y, (9 - k * 1.2) * E.scale, '240,255,220', rgb, 0.9 - k * 0.15);
         }
         break;
       }
       case 'wisp': {
         const w = t2 => ({ x: from.x + dx * t2 + px * Math.sin(t2 * 11) * dist * 0.14, y: from.y + dy * t2 + py * Math.sin(t2 * 11) * dist * 0.14 });
-        for (let k = 0; k < 4; k++) {
-          const tt = st - k * 0.06; if (tt <= 0) continue;
+        const n = 4 + tier;
+        for (let k = 0; k < n; k++) {
+          const tt = st - k * 0.05; if (tt <= 0) continue;
           const b = w(tt);
-          glowDot(b.x, b.y, 15 - k * 3, '200,170,255', rgb, (0.85 - k * 0.18) * (0.7 + 0.3 * Math.sin(st * 25)));
+          glowDot(b.x, b.y, (15 - k * 2.2) * E.scale, '200,170,255', rgb, (0.85 - k * 0.14) * (0.7 + 0.3 * Math.sin(st * 25)));
         }
         break;
       }
       case 'helix': {
-        for (let s = 0; s < 2; s++) {
+        const strands = 2 + (tier >= 2 ? 1 : 0);
+        for (let s = 0; s < strands; s++) {
           for (let k = 0; k < 6; k++) {
             const tt = st - k * 0.04; if (tt <= 0) continue;
-            const amp = Math.sin(tt * 16 + s * Math.PI) * 16;
+            const amp = Math.sin(tt * 16 + s * (Math.PI * 2 / strands)) * 16 * E.scale;
             const b = { x: from.x + dx * tt + px * amp, y: from.y + dy * tt + py * amp };
-            glowDot(b.x, b.y, 8 - k, s ? '190,210,255' : '255,230,200', rgb, 0.9 - k * 0.13);
+            glowDot(b.x, b.y, (8 - k) * E.scale, s % 2 ? '190,210,255' : '255,230,200', rgb, 0.9 - k * 0.13);
           }
         }
         break;
       }
       case 'pulse': {
         const p = path(st);
-        ctx.fillStyle = `rgba(20,10,25,${0.16 * Math.sin(st * Math.PI)})`;
+        ctx.fillStyle = `rgba(20,10,25,${(0.12 + tier * 0.06) * Math.sin(st * Math.PI)})`;
         ctx.fillRect(0, 0, canvas.width, canvas.height); // creeping gloom
-        glowDot(p.x, p.y, 20, '40,20,50', rgb, 0.95);
-        ctx.strokeStyle = `rgba(${rgb},0.8)`; ctx.lineWidth = 2;
-        for (let s = 0; s < 4; s++) {
-          const a2 = st * 10 + s * 1.57;
+        glowDot(p.x, p.y, 20 * E.scale, '40,20,50', rgb, 0.95);
+        ctx.strokeStyle = `rgba(${rgb},0.8)`; ctx.lineWidth = 2 * E.scale;
+        const tendrils = 4 + tier * 2;
+        for (let s = 0; s < tendrils; s++) {
+          const a2 = st * 10 + s * (Math.PI * 2 / tendrils);
           ctx.beginPath(); ctx.moveTo(p.x, p.y);
-          ctx.quadraticCurveTo(p.x + Math.cos(a2) * 26, p.y + Math.sin(a2) * 26, p.x + Math.cos(a2 + 0.6) * 38, p.y + Math.sin(a2 + 0.6) * 38);
+          ctx.quadraticCurveTo(p.x + Math.cos(a2) * 26 * E.scale, p.y + Math.sin(a2) * 26 * E.scale, p.x + Math.cos(a2 + 0.6) * 38 * E.scale, p.y + Math.sin(a2 + 0.6) * 38 * E.scale);
           ctx.stroke();
         }
         break;
       }
       case 'spiral': {
         const p = path(st);
-        for (let k = 0; k < 7; k++) {
-          const a2 = st * 14 + k * 0.9;
-          const r = 14 + k * 2;
+        const n = Math.round(7 * E.count);
+        for (let k = 0; k < n; k++) {
+          const a2 = st * 14 + k * (6.28 / n);
+          const r = (14 + k * 2) * E.scale;
           const sx = p.x + Math.cos(a2) * r, sy = p.y + Math.sin(a2) * r;
-          glowDot(sx, sy, 4, '255,255,255', rgb, 0.9 - k * 0.1);
+          glowDot(sx, sy, 4 * E.scale, '255,255,255', rgb, 0.9 - k * 0.07);
         }
-        glowDot(p.x, p.y, 10, '255,240,250', rgb, 1);
+        glowDot(p.x, p.y, 10 * E.scale, '255,240,250', rgb, 1);
         break;
       }
       case 'beam': {
-        if (st < 0.25) { glowDot(from.x, from.y, 10 + st * 60, '240,245,255', rgb, st * 4); break; }
+        if (st < 0.25) { glowDot(from.x, from.y, (10 + st * 60) * E.scale, '240,245,255', rgb, st * 4); break; }
         const bt = (st - 0.25) / 0.75;
-        const w = 7 + Math.sin(bt * 30) * 3;
+        const w = (7 + Math.sin(bt * 30) * 3) * E.scale;
         const g = ctx.createLinearGradient(from.x, from.y, to.x, to.y);
         g.addColorStop(0, `rgba(255,255,255,0.95)`); g.addColorStop(1, `rgba(${rgb},0.9)`);
         ctx.strokeStyle = g; ctx.lineWidth = w; ctx.lineCap = 'round';
         ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke();
-        for (let s = 0; s < 3; s++) { // rings racing down the beam
-          const tt = (bt * 2 + s / 3) % 1;
+        if (tier >= 2) { // twin outer beams
+          ctx.lineWidth = w * 0.4; ctx.strokeStyle = `rgba(${rgb},0.6)`;
+          for (const off of [-12, 12]) {
+            ctx.beginPath(); ctx.moveTo(from.x + px * off, from.y + py * off); ctx.lineTo(to.x + px * off, to.y + py * off); ctx.stroke();
+          }
+        }
+        for (let s = 0; s < 3 + tier; s++) { // rings racing down the beam
+          const tt = (bt * 2 + s / (3 + tier)) % 1;
           const b = { x: from.x + dx * tt, y: from.y + dy * tt };
           ctx.strokeStyle = `rgba(${rgb},${0.8 * (1 - tt)})`; ctx.lineWidth = 2;
-          ctx.beginPath(); ctx.arc(b.x, b.y, 10 + tt * 8, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(b.x, b.y, (10 + tt * 8) * E.scale, 0, Math.PI * 2); ctx.stroke();
         }
         break;
       }
@@ -976,31 +1034,40 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial) {
   const impact = (it, heavy) => {
     const a = 1 - it;
     ctx.save();
+    // Tier-2 drama: a screen-wide type-tinted flash right at detonation
+    if (E.flashA > 0 && it < 0.3) {
+      ctx.fillStyle = `rgba(${rgb},${E.flashA * (1 - it / 0.3) * 0.5})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     // white core flash + type shockwave ring(s)
-    glowDot(to.x, to.y, 16 * (1 - it) + 6, '255,255,255', rgb, a * 0.95);
-    ctx.strokeStyle = `rgba(${rgb},${a * 0.85})`; ctx.lineWidth = heavy ? 5 : 3;
-    ctx.beginPath(); ctx.arc(to.x, to.y, it * (heavy ? 64 : 50), 0, Math.PI * 2); ctx.stroke();
-    if (heavy) { ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(to.x, to.y, it * 40, 0, Math.PI * 2); ctx.stroke(); }
-    ctx.shadowColor = `rgba(${rgb},0.8)`; ctx.shadowBlur = 12;
+    glowDot(to.x, to.y, (16 * (1 - it) + 6) * E.scale, '255,255,255', rgb, a * 0.95);
+    for (let rI = 0; rI < E.rings; rI++) {
+      const rt = Math.max(0, it - rI * 0.12);
+      if (rt <= 0) continue;
+      ctx.strokeStyle = `rgba(${rgb},${a * (0.85 - rI * 0.15)})`;
+      ctx.lineWidth = (heavy ? 5 : 3) - rI;
+      ctx.beginPath(); ctx.arc(to.x, to.y, rt * ((heavy ? 64 : 50) + rI * 16) * E.scale, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.shadowColor = `rgba(${rgb},0.8)`; ctx.shadowBlur = 12 * E.scale;
 
     for (const v of burstVecs) {
       const bx = to.x + v.ax * it, byRaw = to.y + v.ay * it;
       switch (fx.burst) {
-        case 'embers':   glowDot(bx, byRaw - it * 26, v.sz + 2, '255,220,120', rgb, a); break;
-        case 'splash': { const g2 = it * it * 70; glowDot(bx, byRaw + g2 - 30 * it, v.sz, '225,245,255', rgb, a); break; }
+        case 'embers':   glowDot(bx, byRaw - it * 26 * E.scale, v.sz + 2, '255,220,120', rgb, a); break;
+        case 'splash': { const g2 = it * it * 70 * E.scale; glowDot(bx, byRaw + g2 - 30 * it, v.sz, '225,245,255', rgb, a); break; }
         case 'sparks': {
-          ctx.strokeStyle = `rgba(${rgb},${a})`; ctx.lineWidth = 2;
+          ctx.strokeStyle = `rgba(${rgb},${a})`; ctx.lineWidth = 2 * E.scale;
           ctx.beginPath(); ctx.moveTo(bx, byRaw); ctx.lineTo(bx + v.ax * 0.12, byRaw + v.ay * 0.12); ctx.stroke(); break;
         }
         case 'petals': { const sway = Math.sin(it * 10 + v.ph) * 7; ctx.save(); ctx.translate(bx + sway, byRaw + it * 22); ctx.rotate(it * 7 + v.ph);
-          ctx.beginPath(); ctx.ellipse(0, 0, 6, 2.6, 0, 0, Math.PI * 2); ctx.fillStyle = `rgba(${rgb},${a})`; ctx.fill(); ctx.restore(); break; }
+          ctx.beginPath(); ctx.ellipse(0, 0, 6 * E.scale, 2.6 * E.scale, 0, 0, Math.PI * 2); ctx.fillStyle = `rgba(${rgb},${a})`; ctx.fill(); ctx.restore(); break; }
         case 'crystals': { ctx.save(); ctx.translate(to.x + v.ax * Math.min(it * 1.6, 0.55), to.y + v.ay * Math.min(it * 1.6, 0.55)); ctx.rotate(v.ph);
           ctx.beginPath(); ctx.moveTo(0, -v.sz - 3); ctx.lineTo(v.sz * 0.6, 0); ctx.lineTo(0, v.sz + 3); ctx.lineTo(-v.sz * 0.6, 0); ctx.closePath();
           ctx.fillStyle = `rgba(${rgb},${a})`; ctx.fill(); ctx.strokeStyle = `rgba(255,255,255,${a})`; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); break; }
         case 'bubbles': glowDot(bx, byRaw - it * 18, v.sz * (1 + it), rgb, rgb, a * 0.8); break;
-        case 'rubble': { const g2 = it * it * 90; ctx.save(); ctx.translate(bx, byRaw + g2 - 20 * it); ctx.rotate(v.ph + it * 5);
+        case 'rubble': { const g2 = it * it * 90 * E.scale; ctx.save(); ctx.translate(bx, byRaw + g2 - 20 * it); ctx.rotate(v.ph + it * 5);
           ctx.fillStyle = `rgba(${rgb},${a})`; ctx.fillRect(-v.sz, -v.sz, v.sz * 2, v.sz * 2); ctx.restore(); break; }
-        case 'gusts': { ctx.strokeStyle = `rgba(${rgb},${a * 0.9})`; ctx.lineWidth = 2;
+        case 'gusts': { ctx.strokeStyle = `rgba(${rgb},${a * 0.9})`; ctx.lineWidth = 2 * E.scale;
           ctx.beginPath(); ctx.arc(to.x, to.y, 8 + Math.hypot(v.ax, v.ay) * it, v.ph, v.ph + 1.1); ctx.stroke(); break; }
         case 'rings': break; // rings drawn below
         case 'vortex': { const ang = v.ph + it * 5, r = (1 - it) * Math.hypot(v.ax, v.ay);
@@ -1009,34 +1076,44 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial) {
           ctx.strokeStyle = `rgba(${rgb},${a})`; ctx.lineWidth = 1.6;
           ctx.beginPath(); for (let s = 0; s < 5; s++) { const a2 = (s / 5) * Math.PI * 2; ctx.lineTo(Math.cos(a2) * (v.sz + 3), Math.sin(a2) * (v.sz + 3)); ctx.lineTo(Math.cos(a2 + 0.63) * v.sz * 0.45, Math.sin(a2 + 0.63) * v.sz * 0.45); }
           ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); break; }
-        case 'impact': { ctx.strokeStyle = `rgba(${rgb},${a})`; ctx.lineWidth = 3;
+        case 'impact': { ctx.strokeStyle = `rgba(${rgb},${a})`; ctx.lineWidth = 3 * E.scale;
           ctx.beginPath(); ctx.moveTo(to.x + v.ax * it * 0.4, to.y + v.ay * it * 0.4); ctx.lineTo(to.x + v.ax * it, to.y + v.ay * it); ctx.stroke(); break; }
       }
     }
     if (fx.burst === 'rings') {
-      for (let s = 0; s < 4; s++) {
-        const rr = it * (26 + s * 18);
-        ctx.strokeStyle = `rgba(${rgb},${a * (1 - s * 0.18)})`; ctx.lineWidth = 3;
+      for (let s = 0; s < 4 + tier; s++) {
+        const rr = it * (26 + s * 18) * E.scale;
+        ctx.strokeStyle = `rgba(${rgb},${a * (1 - s * 0.15)})`; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(to.x, to.y, rr, 0, Math.PI * 2); ctx.stroke();
       }
+    }
+    // Tier-2 lingering secondary burst: a delayed echo of element particles
+    if (E.extra && it > 0.45) {
+      const et = (it - 0.45) / 0.55, ea = 1 - et;
+      for (let k = 0; k < 10; k++) {
+        const v = burstVecs[k];
+        glowDot(to.x + v.ax * 0.5 * et, to.y + v.ay * 0.5 * et - et * 18, v.sz * 0.8, '255,255,255', rgb, ea * 0.7);
+      }
+      ctx.strokeStyle = `rgba(255,255,255,${ea * 0.5})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(to.x, to.y, et * 90 * E.scale, 0, Math.PI * 2); ctx.stroke();
     }
     ctx.restore();
   };
 
   if (isSpecial) {
     const TRAVEL = 0.52;
-    return runCanvas(canvas, ctx, 640, (c, t) => {
+    return runCanvas(canvas, ctx, Math.round(640 * E.dur), (c, t) => {
       if (t < TRAVEL) travel(t / TRAVEL);
-      else impact((t - TRAVEL) / (1 - TRAVEL), false);
+      else impact((t - TRAVEL) / (1 - TRAVEL), tier >= 2);
     });
   }
   // Physical: type-coloured slashes rake the target, then a heavy shockwave.
   const STRIKE = 0.34;
-  return runCanvas(canvas, ctx, 500, (c, t) => {
+  return runCanvas(canvas, ctx, Math.round(500 * E.dur), (c, t) => {
     if (t < STRIKE) {
       const st = t / STRIKE;
       ctx.save();
-      ctx.shadowColor = `rgba(${rgb},0.9)`; ctx.shadowBlur = 14;
+      ctx.shadowColor = `rgba(${rgb},0.9)`; ctx.shadowBlur = 14 * E.scale;
       for (const s of slashes) {
         const lt = (st - s.delay) / 0.4; if (lt <= 0 || lt > 1) continue;
         const swipe = (lt - 0.5) * 2; // -1 → 1 across the target
@@ -1046,8 +1123,19 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial) {
         const ty2 = to.y + Math.sin(s.ang) * Math.max(-1, swipe - 0.7) * s.len;
         const g = ctx.createLinearGradient(tx2, ty2, cx2, cy2);
         g.addColorStop(0, `rgba(${rgb},0)`); g.addColorStop(0.7, `rgba(${rgb},0.9)`); g.addColorStop(1, 'rgba(255,255,255,0.95)');
-        ctx.strokeStyle = g; ctx.lineWidth = 7; ctx.lineCap = 'round';
+        ctx.strokeStyle = g; ctx.lineWidth = 7 * E.scale; ctx.lineCap = 'round';
         ctx.beginPath(); ctx.moveTo(tx2, ty2); ctx.lineTo(cx2, cy2); ctx.stroke();
+      }
+      // Tier-2 physicals carve a bright X-flash right before detonation
+      if (tier >= 2 && st > 0.7) {
+        const xa = (st - 0.7) / 0.3;
+        ctx.strokeStyle = `rgba(255,255,255,${xa * 0.9})`; ctx.lineWidth = 5;
+        for (const ang of [0.6, 2.2]) {
+          ctx.beginPath();
+          ctx.moveTo(to.x - Math.cos(ang) * 55 * xa, to.y - Math.sin(ang) * 55 * xa);
+          ctx.lineTo(to.x + Math.cos(ang) * 55 * xa, to.y + Math.sin(ang) * 55 * xa);
+          ctx.stroke();
+        }
       }
       ctx.restore();
     } else {
@@ -1062,10 +1150,12 @@ function playAttackAnimation(moveType, attackerEl, targetEl, isSpecial = true, m
   if (!ac) return Promise.resolve();
   const { canvas, ctx, from, to } = ac;
 
-  // Every attack gets an energy charge + a lunge toward its target
-  // (both concurrent with the elemental animation).
+  const tier = MOVE_TIER_BY_NAME[moveName] ?? 1;
+
+  // Every attack gets an energy charge + a lunge toward its target (both
+  // concurrent with the elemental animation); both grow with the move tier.
   if (moveName !== 'Splash' && moveName !== 'Teleport') {
-    chargeAttacker(attackerEl, moveType);
+    chargeAttacker(attackerEl, moveType, tier);
     lungeAttacker(attackerEl, from, to, !isSpecial);
   }
 
@@ -1073,7 +1163,7 @@ function playAttackAnimation(moveType, attackerEl, targetEl, isSpecial = true, m
   if (moveName === 'Splash')   return animSplash(canvas, ctx, from, to);
   if (moveName === 'Teleport') return animTeleport(canvas, ctx, from, to);
 
-  return animElementalAttack(canvas, ctx, from, to, (moveType || 'normal').toLowerCase(), isSpecial);
+  return animElementalAttack(canvas, ctx, from, to, (moveType || 'normal').toLowerCase(), isSpecial, tier);
 }
 
 /* ── particle factories ── */

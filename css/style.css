@@ -3774,7 +3774,7 @@ body.dark-mode .btn-primary:disabled { box-shadow: 3px 3px 0 0 #000; }
 .attack-charge {
   position: absolute; left: 50%; bottom: 46px;
   width: 70px; height: 70px;
-  transform: translate(-50%, 50%);
+  transform: translate(-50%, 50%) scale(var(--chs, 1));
   border-radius: 50%;
   pointer-events: none; z-index: 6;
   background: radial-gradient(circle, rgba(var(--c),0) 26%, rgba(var(--c),0.65) 58%, rgba(var(--c),0) 76%);
@@ -3788,9 +3788,9 @@ body.dark-mode .btn-primary:disabled { box-shadow: 3px 3px 0 0 #000; }
   background: radial-gradient(circle, #fff 0%, rgba(var(--c),0.9) 60%, rgba(var(--c),0) 100%);
 }
 @keyframes attack-charge {
-  0%   { opacity: 0; transform: translate(-50%, 50%) scale(1.5) rotate(0deg); }
-  55%  { opacity: 1; transform: translate(-50%, 50%) scale(0.55) rotate(140deg); }
-  100% { opacity: 0; transform: translate(-50%, 50%) scale(0.2) rotate(220deg); }
+  0%   { opacity: 0; transform: translate(-50%, 50%) scale(calc(1.5 * var(--chs, 1))) rotate(0deg); }
+  55%  { opacity: 1; transform: translate(-50%, 50%) scale(calc(0.55 * var(--chs, 1))) rotate(140deg); }
+  100% { opacity: 0; transform: translate(-50%, 50%) scale(calc(0.2 * var(--chs, 1))) rotate(220deg); }
 }
 
 /* ======================================================================
