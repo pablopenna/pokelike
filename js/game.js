@@ -953,11 +953,9 @@ async function doBattleNode(node) {
 // from map 4) so the player's young team isn't outnumbered 6-to-2, and later
 // gyms tighten their filler toward the ace so it stays a threat.
 function gymBuildOpts() {
-  const m = state.currentMap;
-  return {
-    teamSize: m === 0 ? 4 : m === 1 ? 5 : 6,
-    fillerSpread: m <= 2 ? 3 : m <= 4 ? 3 : m <= 6 ? 2 : 1,
-  };
+  // Full-power gyms: always 6 Pokémon, filler AT the ace's level, everyone
+  // holding an item (filler leans toward the leader's type-boost item).
+  return { teamSize: 6, fillerSpread: 0, equipFiller: true };
 }
 
 async function runGymBattle(node, leader, maxGenId, aceTarget) {
@@ -1010,7 +1008,7 @@ async function doElite4() {
   for (let i = state.eliteIndex; i < bosses.length; i++) {
     state.eliteIndex = i;
     const boss = bosses[i];
-    const built = await buildBossTeam(boss.team, boss.type, 151, null, { fillerSpread: 1 });
+    const built = await buildBossTeam(boss.team, boss.type, 151, null, { fillerSpread: 0, equipFiller: true });
     const enemyTeam = built.map(p => createInstance(p, p.level, false, 2));
 
     showScreen('battle-screen');
@@ -1039,7 +1037,7 @@ async function doBothElite4() {
     const slot = lineup[i];
     const member = (slot.gen === 3 ? GEN3_ELITE_4 : slot.gen === 2 ? GEN2_ELITE_4 : ELITE_4)[slot.idx];
     const target = Math.max(...ELITE_4[Math.min(i, ELITE_4.length - 1)].team.map(p => p.level));
-    const built = await buildBossTeam(member.team, member.type, 386, target, { fillerSpread: 1 });
+    const built = await buildBossTeam(member.team, member.type, 386, target, { fillerSpread: 0, equipFiller: true });
     const enemyTeam = built.map(p => ({ ...createInstance(p, p.level, false, 2), heldItem: p.heldItem || null }));
 
     showScreen('battle-screen');
@@ -1196,7 +1194,7 @@ async function doEliteGauntlet(bosses, maxGenId, winAchievementId = null) {
         nextBoss: boss,
       });
     }
-    const built = await buildBossTeam(boss.team, boss.type, maxGenId, null, { fillerSpread: 1 });
+    const built = await buildBossTeam(boss.team, boss.type, maxGenId, null, { fillerSpread: 0, equipFiller: true });
     const enemyTeam = built.map(p => ({ ...createInstance(p, p.level, false, 2), heldItem: p.heldItem || null }));
     showScreen('battle-screen');
     document.getElementById('battle-title').textContent = `${boss.title}: ${boss.name}!`;

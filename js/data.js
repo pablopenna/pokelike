@@ -1464,9 +1464,21 @@ function getSpeciesIdsByType(type, maxGenId = 151) {
 // pass 3-5 so the player's small starting team isn't outnumbered 6-to-2.
 // opts.fillerSpread (default 4): how far below the ace the filler descends
 // (ace−1−min(i,spread)). Late gyms pass 1-2 so their filler stays a threat.
+// Thematic held item for boss filler: leans toward the leader's type-boost
+// item, mixed with generally strong picks.
+function bossFillerItem(leaderType) {
+  const pool = ['leftovers', 'expert_belt', 'quick_claw', 'life_orb', 'rocky_helmet'];
+  const typeItemId = TYPE_ITEM_MAP[leaderType];
+  if (typeItemId) pool.unshift(typeItemId, typeItemId); // weighted toward the type item
+  const id = pool[Math.floor(rng() * pool.length)];
+  const def = ITEM_POOL.find(i => i.id === id);
+  return def ? { id: def.id, name: def.name, icon: def.icon } : null;
+}
+
 async function buildBossTeam(baseTeam, leaderType, maxGenId = 151, aceLevelTarget = null, opts = {}) {
   const teamSize = Math.max(Math.min(opts.teamSize ?? 6, 6), baseTeam.length);
-  const fillerSpread = opts.fillerSpread ?? 4;
+  const fillerSpread = opts.fillerSpread ?? 4; // 0 = filler fights AT the ace's level
+  const equipFiller = !!opts.equipFiller;
   let team = baseTeam.map(p => ({ ...p }));
   const curAce = Math.max(...team.map(p => p.level));
   if (aceLevelTarget != null && curAce > 0) {
@@ -1486,7 +1498,7 @@ async function buildBossTeam(baseTeam, leaderType, maxGenId = 151, aceLevelTarge
   // the slot's level. Cycling lets small type pools (e.g. Dragon) still fill 6.
   const picks = [];
   for (let k = 0, poolIdx = 0; picks.length < need && k < need * 60; k++) {
-    const lvl = Math.max(1, Math.min(100, ace - 1 - Math.min(picks.length, fillerSpread))); // below the ace
+    const lvl = Math.max(1, Math.min(100, fillerSpread === 0 ? ace : ace - 1 - Math.min(picks.length, fillerSpread)));
     let id;
     if (pool.length) { id = pool[poolIdx % pool.length]; poolIdx++; }
     else { id = 1 + Math.floor(rng() * maxGenId); if (LEGENDARY_ID_SET.has(id)) continue; }
@@ -1496,7 +1508,9 @@ async function buildBossTeam(baseTeam, leaderType, maxGenId = 151, aceLevelTarge
   const fetched = await Promise.all(picks.map(p => fetchPokemonById(p.id)));
   fetched.forEach((sp, idx) => {
     if (!sp) return;
-    team.push({ speciesId: sp.id, name: sp.name, types: sp.types, baseStats: sp.baseStats, level: picks[idx].level });
+    const member = { speciesId: sp.id, name: sp.name, types: sp.types, baseStats: sp.baseStats, level: picks[idx].level };
+    if (equipFiller) member.heldItem = bossFillerItem(leaderType);
+    team.push(member);
   });
   return team.slice(0, teamSize);
 }
