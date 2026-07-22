@@ -878,6 +878,10 @@ function getLevelForNode(node) {
     const spread = Math.max(1, Math.round((maxL - minL) / 8));
     return Math.min(maxL, Math.max(minL, base + Math.floor(rng() * spread)));
   }
+  // Map 1 floor: the ladder's natural start (level 1-2, minus the early-map
+  // reduction) produced level-1 wilds against a level-5 starter. Early nodes
+  // never drop below 3 (catch nodes already floor at 4).
+  const _mapFloor = state.currentMap === 0 ? 3 : 1;
   // Gen 2/3: deterministic per-layer curve. Layers 1-7 use fixed offsets so each
   // map reads cleanly as Lv mapMin..mapMin+9 (e.g. 1,2,3,5,6,8,9 in map 1, gym
   // at 10). Boss layer 8 uses leader data, not this function.
@@ -886,14 +890,14 @@ function getLevelForNode(node) {
     const [minL, maxL] = (_runGen === '3' ? GEN3_MAP_LEVEL_RANGES : GEN2_MAP_LEVEL_RANGES)[state.currentMap];
     if (node.layer >= GEN2_LAYER_OFFSETS.length + 1) return maxL;
     const layerIdx = Math.min(GEN2_LAYER_OFFSETS.length, Math.max(1, node.layer)) - 1;
-    return minL + GEN2_LAYER_OFFSETS[layerIdx];
+    return Math.min(maxL, Math.max(_mapFloor, minL + GEN2_LAYER_OFFSETS[layerIdx]));
   }
   // Non-gen2/3: spread levels evenly across layers 1..7 (highest non-boss layer).
   const [minL, maxL] = MAP_LEVEL_RANGES[state.currentMap];
   const t = Math.min(1, Math.max(0, (node.layer - 1) / 6));
   const base = Math.round(minL + t * (maxL - minL));
   const spread = Math.max(1, Math.round((maxL - minL) / 8));
-  return Math.min(maxL, Math.max(minL, base + Math.floor(rng() * spread)));
+  return Math.min(maxL, Math.max(_mapFloor, Math.max(minL, base + Math.floor(rng() * spread))));
 }
 
 async function doBattleNode(node) {
