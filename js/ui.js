@@ -713,24 +713,24 @@ function chargeAttacker(el, moveType, tier = 1) {
 // shockwave. Every cast pre-rolls its own randomness, so no two look alike.
 
 const ELEMENT_FX = {
-  normal:   { motion: 'comet',  burst: 'sparks'   },
-  fire:     { motion: 'comet',  burst: 'embers'   },
-  water:    { motion: 'wave',   burst: 'splash'   },
-  electric: { motion: 'bolt',   burst: 'sparks'   },
-  grass:    { motion: 'leaves', burst: 'petals'   },
-  ice:      { motion: 'shards', burst: 'crystals' },
-  fighting: { motion: 'comet',  burst: 'impact'   },
-  poison:   { motion: 'lob',    burst: 'bubbles'  },
-  ground:   { motion: 'quake',  burst: 'rubble'   },
-  flying:   { motion: 'gust',   burst: 'gusts'    },
-  psychic:  { motion: 'rings',  burst: 'rings'    },
-  bug:      { motion: 'zigzag', burst: 'sparks'   },
-  rock:     { motion: 'lob',    burst: 'rubble'   },
-  ghost:    { motion: 'wisp',   burst: 'vortex'   },
-  dragon:   { motion: 'helix',  burst: 'impact'   },
-  dark:     { motion: 'pulse',  burst: 'vortex'   },
-  steel:    { motion: 'beam',   burst: 'impact'   },
-  fairy:    { motion: 'spiral', burst: 'stars'    },
+  normal:   { motion: 'comet',    burst: 'sparks'   },
+  fire:     { motion: 'flamejet', burst: 'embers'   },
+  water:    { motion: 'waterjet', burst: 'splash'   },
+  electric: { motion: 'bolt',     burst: 'sparks'   },
+  grass:    { motion: 'vines',    burst: 'petals'   },
+  ice:      { motion: 'shards',   burst: 'crystals' },
+  fighting: { motion: 'comet',    burst: 'impact'   },
+  poison:   { motion: 'spray',    burst: 'bubbles'  },
+  ground:   { motion: 'quake',    burst: 'rubble'   },
+  flying:   { motion: 'gust',     burst: 'gusts'    },
+  psychic:  { motion: 'mind',     burst: 'rings'    },
+  bug:      { motion: 'swarm',    burst: 'sparks'   },
+  rock:     { motion: 'lob',      burst: 'rubble'   },
+  ghost:    { motion: 'spectral', burst: 'vortex'   },
+  dragon:   { motion: 'serpent',  burst: 'impact'   },
+  dark:     { motion: 'grab',     burst: 'vortex'   },
+  steel:    { motion: 'beam',     burst: 'impact'   },
+  fairy:    { motion: 'moonbeam', burst: 'stars'    },
 };
 
 // Move tier lookup: each type's MOVE_POOL lists its physical/special moves in
@@ -820,20 +820,21 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
     ctx.strokeStyle = g; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.stroke();
   };
 
-  // ── travel renderers (special phase 1) ──
+  // ── travel renderers (special phase 1): each type draws ITS phenomenon ──
+  const jitter = (k, f = 1) => Math.sin(k * 12.9898 + R[4] * 78.233) * f;
   const travel = (st) => {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter'; // additive glow — colors bloom
     ctx.shadowColor = `rgba(${rgb},0.85)`; ctx.shadowBlur = 18 * E.scale;
     switch (fx.motion) {
-      case 'comet': {
+
+      case 'comet': { // normal/fighting: energy comet with flickering tongues
         for (const off of [0, ...sideOffsets]) {
           const lag = off === 0 ? 0 : 0.08;
           const tt = st - lag; if (tt <= 0) continue;
           const p = pathAt(tt, off);
           tailStroke(tt, 0.3, (off === 0 ? 10 : 6) * E.scale, off === 0 ? 0.9 : 0.6, off);
           glowDot(p.x, p.y, (off === 0 ? 22 : 13) * E.scale, '255,255,230', rgb, 1);
-          // flickering tongues licking back off the head
           const bang = Math.atan2(dy, dx) + Math.PI;
           for (let f = 0; f < 3; f++) {
             const fl = (0.7 + 0.3 * Math.sin(st * 42 + f * 2.1)) * (off === 0 ? 27 : 15) * E.scale;
@@ -847,35 +848,80 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
             ctx.fill();
           }
         }
-        for (let k = 0; k < Math.round(5 * E.count); k++) { // spark specks shed behind
-          const sp = path(Math.max(0, st - 0.05 - k * 0.045));
-          glowDot(sp.x + px * Math.sin(st * 20 + k) * 8, sp.y + py * Math.cos(st * 17 + k) * 8, 4 * E.scale, rgb, rgb, 0.6 - k * 0.08);
+        break;
+      }
+
+      case 'flamejet': { // FIRE: a roaring flamethrower cone from the attacker
+        const front = Math.min(1, st * 1.3);
+        const puffs = Math.round(30 * E.count);
+        for (let k = 0; k < puffs; k++) {
+          const ft2 = ((k * 0.618 + st * 2.4) % 1) * front;          // flowing distribution
+          const spread = (5 + ft2 * 30) * E.scale;                    // widening cone
+          const b = pathAt(ft2, jitter(k, spread));
+          const sz = (5 + ft2 * 15) * E.scale * (0.8 + 0.2 * Math.sin(st * 52 + k));
+          const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, sz);
+          g.addColorStop(0, 'rgba(255,242,170,0.95)');
+          g.addColorStop(0.45, 'rgba(255,140,30,0.8)');
+          g.addColorStop(1, 'rgba(190,35,0,0)');
+          ctx.beginPath(); ctx.arc(b.x, b.y, sz, 0, 6.283); ctx.fillStyle = g; ctx.fill();
+        }
+        // white-hot nozzle core at the source
+        glowDot(from.x + dx * 0.04, from.y + dy * 0.04, 12 * E.scale, '255,255,220', rgb, 0.95);
+        break;
+      }
+
+      case 'waterjet': { // WATER: a thick pressurized jet with a foam core
+        const front = Math.min(1, st * 1.35);
+        const W0 = 14 * E.scale, W1 = 6 * E.scale;
+        const wob = t2 => Math.sin(t2 * 9 + st * 20) * 7 * E.scale;
+        const edge = (t2, sgn) => {
+          const w = (W0 - (W0 - W1) * (t2 / Math.max(front, 0.01))) * sgn;
+          const b = pathAt(t2, wob(t2));
+          return { x: b.x + px * w, y: b.y + py * w };
+        };
+        ctx.beginPath();
+        for (let s2 = 0; s2 <= 16; s2++) { const p2 = edge((s2 / 16) * front, 1); s2 === 0 ? ctx.moveTo(p2.x, p2.y) : ctx.lineTo(p2.x, p2.y); }
+        for (let s2 = 16; s2 >= 0; s2--) { const p2 = edge((s2 / 16) * front, -1); ctx.lineTo(p2.x, p2.y); }
+        ctx.closePath();
+        ctx.fillStyle = `rgba(${rgb},0.75)`; ctx.fill();
+        // foam core line
+        ctx.strokeStyle = 'rgba(235,250,255,0.9)'; ctx.lineWidth = 4 * E.scale; ctx.lineCap = 'round';
+        ctx.beginPath();
+        for (let s2 = 0; s2 <= 16; s2++) { const b = pathAt((s2 / 16) * front, wob((s2 / 16) * front)); s2 === 0 ? ctx.moveTo(b.x, b.y) : ctx.lineTo(b.x, b.y); }
+        ctx.stroke();
+        // droplets spraying off the head
+        const hd = pathAt(front, wob(front));
+        for (let k = 0; k < Math.round(7 * E.count); k++) {
+          glowDot(hd.x + jitter(k, 20), hd.y + jitter(k + 3, 20), 4 * E.scale, '230,248,255', rgb, 0.85);
         }
         break;
       }
-      case 'wave': {
-        const streams = 3 + tier;
-        for (let s = 0; s < streams; s++) {
-          const off = (s - (streams - 1) / 2) * 14;
-          for (let d2 = 0; d2 < 6; d2++) {
-            const tt = st - d2 * 0.055; if (tt <= 0) continue;
-            const b = path(tt);
-            const wob = Math.sin(tt * 22 + s * 2) * 9;
-            glowDot(b.x + px * (off + wob), b.y + py * (off + wob), (7 - d2) * E.scale, '230,248,255', rgb, 0.95 - d2 * 0.14);
-          }
-        }
-        { // cresting wave front with a foam edge
-          const cw = path(st);
-          ctx.save(); ctx.translate(cw.x, cw.y); ctx.rotate(Math.atan2(dy, dx) + Math.PI / 2);
-          ctx.beginPath(); ctx.arc(0, 0, 24 * E.scale, Math.PI * 0.15, Math.PI * 0.85);
-          ctx.strokeStyle = 'rgba(235,250,255,0.95)'; ctx.lineWidth = 5 * E.scale; ctx.lineCap = 'round'; ctx.stroke();
-          ctx.beginPath(); ctx.arc(0, 0, 16 * E.scale, Math.PI * 0.1, Math.PI * 0.9);
-          ctx.strokeStyle = `rgba(${rgb},0.85)`; ctx.lineWidth = 8 * E.scale; ctx.stroke();
-          ctx.restore();
+
+      case 'vines': { // GRASS: vines erupt beneath the victim and lash upward
+        const g2 = Math.min(1, st * 1.2);
+        const vines = 4 + tier;
+        for (let v = 0; v < vines; v++) {
+          const baseX = to.x + (v - (vines - 1) / 2) * 14 * E.scale;
+          const baseY = to.y + 58;
+          const h = (75 + (v % 3) * 14) * E.scale * g2;
+          const sway = Math.sin(st * 9 + v * 1.7) * 15;
+          const tipX = to.x + Math.sin(v * 2.1 + st * 5) * 22 * E.scale;
+          const tipY = baseY - h;
+          ctx.strokeStyle = `rgba(${rgb},0.95)`;
+          ctx.lineWidth = (5 - (v % 3)) * E.scale; ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(baseX, baseY);
+          ctx.quadraticCurveTo(baseX + sway, baseY - h * 0.55, tipX, tipY);
+          ctx.stroke();
+          // leaf at each tip
+          ctx.save(); ctx.translate(tipX, tipY); ctx.rotate(Math.sin(st * 7 + v) * 0.8);
+          ctx.beginPath(); ctx.ellipse(0, 0, 8 * E.scale, 3.4 * E.scale, 0.6, 0, 6.283);
+          ctx.fillStyle = `rgba(${rgb},0.95)`; ctx.fill(); ctx.restore();
         }
         break;
       }
-      case 'bolt': {
+
+      case 'bolt': { // ELECTRIC (beloved — untouched): jagged living lightning
         for (let bIdx = 0; bIdx < boltCount; bIdx++) {
           const v = boltVariants[(Math.floor(st * 14) + bIdx * 2) % boltVariants.length];
           const upTo = Math.max(2, Math.ceil(v.length * Math.min(1, st * 2.2)));
@@ -885,23 +931,8 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
         }
         break;
       }
-      case 'leaves': {
-        const n = Math.round(5 * E.count);
-        for (let k = 0; k < n; k++) {
-          const tt = st - k * (0.3 / n); if (tt <= 0) continue;
-          const b = path(tt);
-          const sway = Math.sin(tt * 14 + k * 1.7) * 13;
-          const lx = b.x + px * sway, ly = b.y + py * sway;
-          ctx.save(); ctx.translate(lx, ly); ctx.rotate(tt * 12 + k);
-          ctx.beginPath(); ctx.ellipse(0, 0, 9 * E.scale, 4 * E.scale, 0, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${rgb},0.95)`; ctx.fill();
-          ctx.strokeStyle = 'rgba(240,255,220,0.8)'; ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.moveTo(-8 * E.scale, 0); ctx.lineTo(8 * E.scale, 0); ctx.stroke();
-          ctx.restore();
-        }
-        break;
-      }
-      case 'shards': {
+
+      case 'shards': { // ICE: shard volley, then frost crystallizes ON the victim
         const n = 4 + tier * 2;
         for (let k = 0; k < n; k++) {
           const off = (k - (n - 1) / 2) * 13, tt = st - k * 0.03; if (tt <= 0) continue;
@@ -912,33 +943,33 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
           ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.4; ctx.stroke();
           ctx.restore();
         }
-        break;
-      }
-      case 'lob': {
-        for (const off of [0, ...sideOffsets]) {
-          const tt = st - (off === 0 ? 0 : 0.09); if (tt <= 0) continue;
-          const p = { x: lobPath(tt).x + px * off * 0.4, y: lobPath(tt).y + py * off * 0.4 };
-          if (type === 'rock') {
-            ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(tt * 9);
-            ctx.beginPath();
-            for (let s = 0; s < 7; s++) { const a2 = (s / 7) * Math.PI * 2; const r = (11 + ((s * 37) % 5)) * (off === 0 ? E.scale : E.scale * 0.7); ctx.lineTo(Math.cos(a2) * r, Math.sin(a2) * r); }
-            ctx.closePath(); ctx.fillStyle = `rgba(${rgb},0.98)`; ctx.fill();
-            ctx.strokeStyle = 'rgba(70,50,25,0.9)'; ctx.lineWidth = 2; ctx.stroke();
-            ctx.restore();
-          } else {
-            glowDot(p.x, p.y, 15 * (off === 0 ? E.scale : E.scale * 0.6), '230,180,255', rgb, 1);
-            for (let d3 = 1; d3 <= 3; d3++) { // trail of falling drips
-              const tt2 = tt - d3 * 0.08; if (tt2 <= 0) continue;
-              const pp = lobPath(tt2);
-              glowDot(pp.x, pp.y + d3 * 16 * tt, (6 - d3) * E.scale, rgb, rgb, 0.75 - d3 * 0.18);
-            }
-          }
+        if (st > 0.55) { // hex crystal growing over the target
+          const cg = (st - 0.55) / 0.45;
+          ctx.strokeStyle = `rgba(255,255,255,${0.9 * cg})`; ctx.lineWidth = 2.5;
+          ctx.fillStyle = `rgba(${rgb},${0.25 * cg})`;
+          const CR = 34 * E.scale * cg;
+          ctx.beginPath();
+          for (let s2 = 0; s2 < 6; s2++) { const a2 = s2 * 1.047 + 0.52; s2 === 0 ? ctx.moveTo(to.x + Math.cos(a2) * CR, to.y + Math.sin(a2) * CR) : ctx.lineTo(to.x + Math.cos(a2) * CR, to.y + Math.sin(a2) * CR); }
+          ctx.closePath(); ctx.fill(); ctx.stroke();
+          for (let s2 = 0; s2 < 6; s2++) { const a2 = s2 * 1.047 + 0.52; ctx.beginPath(); ctx.moveTo(to.x, to.y); ctx.lineTo(to.x + Math.cos(a2) * CR, to.y + Math.sin(a2) * CR); ctx.stroke(); }
         }
         break;
       }
-      case 'quake': {
+
+      case 'spray': { // POISON: arcing spray of acid glops that drip
+        const globs = 5 + tier * 2;
+        for (let k = 0; k < globs; k++) {
+          const tt = st - k * (0.5 / globs); if (tt <= 0) continue;
+          const p = { x: lobPath(tt).x + px * jitter(k, 16), y: lobPath(tt).y + py * jitter(k, 10) };
+          glowDot(p.x, p.y, (9 - (k % 3) * 2) * E.scale, '230,180,255', rgb, 0.95);
+          glowDot(p.x + 3, p.y + 9 * tt * 3, 4 * E.scale, rgb, rgb, 0.6); // drip
+        }
+        break;
+      }
+
+      case 'quake': { // GROUND: fissure racing along the floor + rock spikes
         const reach = st;
-        { // jagged fissure racing toward the target
+        {
           const gy = Math.max(from.y, to.y) + 14;
           ctx.strokeStyle = 'rgba(70,45,18,0.95)'; ctx.lineWidth = 4 * E.scale; ctx.lineJoin = 'round';
           ctx.beginPath();
@@ -961,7 +992,8 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
         }
         break;
       }
-      case 'gust': {
+
+      case 'gust': { // FLYING: wind crescents + drifting feathers
         const n = 3 + tier;
         for (let k = 0; k < n; k++) {
           const tt = st - k * 0.06; if (tt <= 0) continue;
@@ -969,113 +1001,183 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
           ctx.strokeStyle = `rgba(${rgb},${0.9 - k * 0.18})`; ctx.lineWidth = (4 - k * 0.6) * E.scale;
           ctx.beginPath(); ctx.arc(b.x, b.y, (16 + k * 7) * E.scale, tt * 9, tt * 9 + Math.PI * 1.2); ctx.stroke();
         }
-        break;
-      }
-      case 'rings': {
-        const n = 3 + tier;
-        for (let k = 0; k < n; k++) {
-          const tt = st - k * 0.08; if (tt <= 0) continue;
+        for (let k = 0; k < Math.round(4 * E.count); k++) { // feathers rocking down
+          const tt = st - k * 0.09; if (tt <= 0) continue;
           const b = path(tt);
-          ctx.strokeStyle = `rgba(${rgb},${0.85 - k * 0.16})`; ctx.lineWidth = 3 * E.scale;
-          ctx.beginPath(); ctx.arc(b.x, b.y, (9 + Math.sin(tt * 18) * 4 + k * 5) * E.scale, 0, Math.PI * 2); ctx.stroke();
-        }
-        const hp = path(st);
-        glowDot(hp.x, hp.y, 12 * E.scale, '255,220,245', rgb, 0.9);
-        break;
-      }
-      case 'zigzag': {
-        const zig = (t2, lane) => ({ x: from.x + dx * t2 + px * (Math.sin(t2 * 26 + lane) * dist * 0.09 + lane * 12), y: from.y + dy * t2 + py * (Math.sin(t2 * 26 + lane) * dist * 0.09 + lane * 12) });
-        const n = Math.round(4 * E.count);
-        for (const lane of [-1, 0, 1]) {
-          const lag = Math.abs(lane) * 0.06;
-          for (let k = 0; k < n; k++) {
-            const tt = st - lag - k * 0.03; if (tt <= 0) continue;
-            const b = zig(tt, lane);
-            glowDot(b.x, b.y, (9 - k * 1.2) * (lane === 0 ? 1 : 0.7) * E.scale, '240,255,220', rgb, (0.9 - k * 0.15) * (lane === 0 ? 1 : 0.7));
-          }
+          const fy = b.y + tt * 30 + k * 6, fxx = b.x + Math.sin(tt * 12 + k) * 18;
+          ctx.save(); ctx.translate(fxx, fy); ctx.rotate(Math.sin(tt * 10 + k) * 0.9);
+          ctx.beginPath(); ctx.ellipse(0, 0, 7 * E.scale, 2.4 * E.scale, 0, 0, 6.283);
+          ctx.fillStyle = `rgba(255,255,255,${0.85 - k * 0.15})`; ctx.fill(); ctx.restore();
         }
         break;
       }
-      case 'wisp': {
-        const w = t2 => ({ x: from.x + dx * t2 + px * Math.sin(t2 * 11) * dist * 0.14, y: from.y + dy * t2 + py * Math.sin(t2 * 11) * dist * 0.14 });
+
+      case 'mind': { // PSYCHIC: reality bends AROUND the victim — contracting rings
+        const rings2 = 4 + tier;
+        for (let k = 0; k < rings2; k++) {
+          const ph2 = (st * 1.5 + k / rings2) % 1;
+          const rr = (78 * (1 - ph2) + 8) * E.scale;
+          ctx.strokeStyle = `rgba(${rgb},${0.85 * ph2})`; ctx.lineWidth = 3 * E.scale;
+          ctx.beginPath(); ctx.arc(to.x, to.y, rr, 0, 6.283); ctx.stroke();
+        }
+        for (let s2 = 0; s2 < 3; s2++) { // counter-rotating lens arcs
+          const a2 = st * (s2 % 2 ? 8 : -8) + s2 * 2.1;
+          ctx.strokeStyle = `rgba(255,220,245,${0.7})`; ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.arc(to.x, to.y, (26 + s2 * 12) * E.scale, a2, a2 + 1.4); ctx.stroke();
+        }
+        glowDot(to.x, to.y, (10 + 5 * Math.sin(st * 22)) * E.scale, '255,230,250', rgb, 0.85);
+        break;
+      }
+
+      case 'swarm': { // BUG: a buzzing swarm converges on the victim
+        const bugs = Math.round(14 * E.count);
+        for (let k = 0; k < bugs; k++) {
+          const lag = (k % 5) * 0.06;
+          const tt = Math.max(0, Math.min(1, st * 1.25 - lag));
+          const scatter = (1 - tt) * 60 * E.scale;
+          const bx2 = from.x + dx * tt + px * jitter(k, scatter) + Math.sin(st * 60 + k * 2) * 4;
+          const by2 = from.y + dy * tt + py * jitter(k + 7, scatter) + Math.cos(st * 55 + k) * 4;
+          glowDot(bx2, by2, 3.5 * E.scale, '240,255,220', rgb, 0.9);
+          ctx.strokeStyle = `rgba(255,255,255,${0.5 + 0.4 * Math.sin(st * 70 + k)})`; ctx.lineWidth = 1.4;
+          ctx.beginPath(); ctx.moveTo(bx2 - 5, by2 - 3); ctx.lineTo(bx2, by2); ctx.lineTo(bx2 + 5, by2 - 3); ctx.stroke();
+        }
+        break;
+      }
+
+      case 'lob': { // ROCK: tumbling boulder(s) on a gravity arc
+        for (const off of [0, ...sideOffsets]) {
+          const tt = st - (off === 0 ? 0 : 0.09); if (tt <= 0) continue;
+          const p = { x: lobPath(tt).x + px * off * 0.4, y: lobPath(tt).y + py * off * 0.4 };
+          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(tt * 9);
+          ctx.beginPath();
+          for (let s = 0; s < 7; s++) { const a2 = (s / 7) * 6.283; const r = (11 + ((s * 37) % 5)) * (off === 0 ? E.scale : E.scale * 0.7); ctx.lineTo(Math.cos(a2) * r, Math.sin(a2) * r); }
+          ctx.closePath(); ctx.fillStyle = `rgba(${rgb},0.98)`; ctx.fill();
+          ctx.strokeStyle = 'rgba(70,50,25,0.9)'; ctx.lineWidth = 2; ctx.stroke();
+          ctx.restore();
+          ctx.strokeStyle = `rgba(255,255,255,0.4)`; ctx.lineWidth = 2; // speed lines
+          ctx.beginPath(); ctx.moveTo(p.x - nx * 24, p.y - ny * 24); ctx.lineTo(p.x - nx * 10, p.y - ny * 10); ctx.stroke();
+        }
+        break;
+      }
+
+      case 'spectral': { // GHOST: a wailing wisp, then spectral claws rake the victim
+        const w = t2 => pathAt(t2, Math.sin(t2 * 11) * dist * 0.14);
         const n = 4 + tier;
         for (let k = 0; k < n; k++) {
           const tt = st - k * 0.05; if (tt <= 0) continue;
           const b = w(tt);
           glowDot(b.x, b.y, (15 - k * 2.2) * E.scale, '200,170,255', rgb, (0.85 - k * 0.14) * (0.7 + 0.3 * Math.sin(st * 25)));
         }
+        if (st > 0.6) { // three curved claw rakes materialize across the victim
+          const cg = (st - 0.6) / 0.4;
+          for (let c2 = 0; c2 < 3; c2++) {
+            const sweep = Math.min(1, cg * 1.5 - c2 * 0.15); if (sweep <= 0) continue;
+            const a2 = -0.7 + c2 * 0.28;
+            ctx.strokeStyle = `rgba(230,210,255,${0.9 * sweep})`; ctx.lineWidth = 4 - c2;
+            ctx.beginPath();
+            ctx.arc(to.x - 10 + c2 * 10, to.y - 8 + c2 * 8, 34 * E.scale, a2, a2 + 1.5 * sweep);
+            ctx.stroke();
+          }
+        }
         break;
       }
-      case 'helix': {
-        const strands = 2 + (tier >= 2 ? 1 : 0);
-        for (let s = 0; s < strands; s++) {
+
+      case 'serpent': { // DRAGON: a serpentine energy dragon snakes to its prey
+        const segs = 20;
+        const bodyAt = t2 => pathAt(t2, Math.sin(t2 * 12 + st * 4) * 20 * E.scale);
+        ctx.lineCap = 'round';
+        for (const [w2, col] of [[11 * E.scale, `rgba(${rgb},0.85)`], [4.5 * E.scale, 'rgba(220,235,255,0.95)']]) {
           ctx.beginPath();
           let started = false;
-          for (let k = 0; k <= 14; k++) {
-            const tt = st - k * 0.022; if (tt <= 0) break;
-            const amp = Math.sin(tt * 16 + s * (Math.PI * 2 / strands)) * 16 * E.scale;
-            const b = { x: from.x + dx * tt + px * amp, y: from.y + dy * tt + py * amp };
+          for (let s2 = 0; s2 <= segs; s2++) {
+            const tt = st - s2 * 0.028; if (tt <= 0) break;
+            const b = bodyAt(tt);
             started ? ctx.lineTo(b.x, b.y) : ctx.moveTo(b.x, b.y); started = true;
           }
-          ctx.strokeStyle = s % 2 ? 'rgba(190,210,255,0.9)' : `rgba(${rgb},0.9)`;
-          ctx.lineWidth = 6 * E.scale; ctx.lineCap = 'round'; ctx.stroke();
+          ctx.strokeStyle = col; ctx.lineWidth = w2; ctx.stroke();
         }
-        const hh = path(st);
-        glowDot(hh.x, hh.y, 16 * E.scale, '255,255,255', rgb, 1);
+        // head: horned triangle facing travel
+        const hp2 = bodyAt(st), hp1 = bodyAt(Math.max(0, st - 0.03));
+        const ha = Math.atan2(hp2.y - hp1.y, hp2.x - hp1.x);
+        ctx.save(); ctx.translate(hp2.x, hp2.y); ctx.rotate(ha);
+        ctx.beginPath(); ctx.moveTo(16 * E.scale, 0); ctx.lineTo(-7 * E.scale, -9 * E.scale); ctx.lineTo(-3 * E.scale, 0); ctx.lineTo(-7 * E.scale, 9 * E.scale); ctx.closePath();
+        ctx.fillStyle = `rgba(${rgb},1)`; ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.6; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-6 * E.scale, -8 * E.scale); ctx.lineTo(-14 * E.scale, -14 * E.scale); ctx.stroke(); // horn
+        ctx.beginPath(); ctx.moveTo(-6 * E.scale, 8 * E.scale); ctx.lineTo(-14 * E.scale, 14 * E.scale); ctx.stroke();
+        ctx.restore();
         break;
       }
-      case 'pulse': {
-        const p = path(st);
+
+      case 'grab': { // DARK: shadow tendrils rise beneath the victim and seize it
         ctx.save(); ctx.globalCompositeOperation = 'source-over';
-        ctx.fillStyle = `rgba(20,10,25,${(0.12 + tier * 0.06) * Math.sin(st * Math.PI)})`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height); // creeping gloom
+        ctx.fillStyle = `rgba(15,8,20,${(0.14 + tier * 0.06) * Math.sin(st * Math.PI)})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.restore();
-        glowDot(p.x, p.y, 20 * E.scale, '40,20,50', rgb, 0.95);
-        ctx.strokeStyle = `rgba(${rgb},0.8)`; ctx.lineWidth = 2 * E.scale;
-        const tendrils = 4 + tier * 2;
-        for (let s = 0; s < tendrils; s++) {
-          const a2 = st * 10 + s * (Math.PI * 2 / tendrils);
-          ctx.beginPath(); ctx.moveTo(p.x, p.y);
-          ctx.quadraticCurveTo(p.x + Math.cos(a2) * 26 * E.scale, p.y + Math.sin(a2) * 26 * E.scale, p.x + Math.cos(a2 + 0.6) * 38 * E.scale, p.y + Math.sin(a2 + 0.6) * 38 * E.scale);
+        const g2 = Math.min(1, st * 1.25);
+        const tendrils = 5 + tier;
+        for (let v = 0; v < tendrils; v++) {
+          const a2 = (v / tendrils) * 6.283 + R[6];
+          const baseX = to.x + Math.cos(a2) * 42 * E.scale;
+          const baseY = to.y + 52;
+          const tipX = to.x + Math.cos(a2 + st * 2) * 12 * E.scale;
+          const tipY = to.y + 40 - (86 * E.scale * g2) * (0.75 + (v % 3) * 0.12);
+          ctx.strokeStyle = `rgba(${rgb},0.9)`; ctx.lineWidth = (5 - (v % 3)) * E.scale; ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(baseX, baseY);
+          ctx.quadraticCurveTo(baseX + Math.sin(st * 8 + v) * 18, baseY - 50 * E.scale, tipX, Math.max(tipY, to.y - 46));
           ctx.stroke();
         }
         break;
       }
-      case 'spiral': {
-        const p = path(st);
-        const n = Math.round(7 * E.count);
-        for (let k = 0; k < n; k++) {
-          const a2 = st * 14 + k * (6.28 / n);
-          const r = (14 + k * 2) * E.scale;
-          const sx = p.x + Math.cos(a2) * r, sy = p.y + Math.sin(a2) * r;
-          const rs = (4 + (k % 3) * 2) * E.scale * (0.7 + 0.3 * Math.sin(st * 30 + k));
-          ctx.strokeStyle = `rgba(255,255,255,${0.9 - k * 0.07})`; ctx.lineWidth = 2;
-          ctx.beginPath(); ctx.moveTo(sx - rs, sy); ctx.lineTo(sx + rs, sy);
-          ctx.moveTo(sx, sy - rs); ctx.lineTo(sx, sy + rs); ctx.stroke();
-          glowDot(sx, sy, 3 * E.scale, '255,255,255', rgb, 0.8 - k * 0.07);
-        }
-        glowDot(p.x, p.y, 10 * E.scale, '255,240,250', rgb, 1);
-        break;
-      }
-      case 'beam': {
+
+      case 'beam': { // STEEL (beloved — untouched): charge-up laser with rings
         if (st < 0.25) { glowDot(from.x, from.y, (10 + st * 60) * E.scale, '240,245,255', rgb, st * 4); break; }
         const bt = (st - 0.25) / 0.75;
         const w = (7 + Math.sin(bt * 30) * 3) * E.scale;
         const g = ctx.createLinearGradient(from.x, from.y, to.x, to.y);
-        g.addColorStop(0, `rgba(255,255,255,0.95)`); g.addColorStop(1, `rgba(${rgb},0.9)`);
+        g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(1, `rgba(${rgb},0.9)`);
         ctx.strokeStyle = g; ctx.lineWidth = w; ctx.lineCap = 'round';
         ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke();
-        if (tier >= 2) { // twin outer beams
+        if (tier >= 2) {
           ctx.lineWidth = w * 0.4; ctx.strokeStyle = `rgba(${rgb},0.6)`;
           for (const off of [-12, 12]) {
             ctx.beginPath(); ctx.moveTo(from.x + px * off, from.y + py * off); ctx.lineTo(to.x + px * off, to.y + py * off); ctx.stroke();
           }
         }
-        for (let s = 0; s < 3 + tier; s++) { // rings racing down the beam
+        for (let s = 0; s < 3 + tier; s++) {
           const tt = (bt * 2 + s / (3 + tier)) % 1;
           const b = { x: from.x + dx * tt, y: from.y + dy * tt };
           ctx.strokeStyle = `rgba(${rgb},${0.8 * (1 - tt)})`; ctx.lineWidth = 2;
-          ctx.beginPath(); ctx.arc(b.x, b.y, (10 + tt * 8) * E.scale, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(b.x, b.y, (10 + tt * 8) * E.scale, 0, 6.283); ctx.stroke();
+        }
+        break;
+      }
+
+      case 'moonbeam': { // FAIRY: a moonlight column descends onto the victim
+        const g2 = Math.min(1, st * 1.4);
+        const topY = Math.max(0, to.y - 220 * E.scale);
+        const bw = 26 * E.scale * (0.8 + 0.2 * Math.sin(st * 18));
+        const grad = ctx.createLinearGradient(to.x, topY, to.x, to.y);
+        grad.addColorStop(0, `rgba(${rgb},0)`);
+        grad.addColorStop(0.5, `rgba(255,235,250,${0.5 * g2})`);
+        grad.addColorStop(1, `rgba(${rgb},${0.85 * g2})`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(to.x - bw * 0.4, topY);
+        ctx.lineTo(to.x + bw * 0.4, topY);
+        ctx.lineTo(to.x + bw, to.y + 8);
+        ctx.lineTo(to.x - bw, to.y + 8);
+        ctx.closePath(); ctx.fill();
+        const n = Math.round(8 * E.count); // twinkling cross-sparkles riding the beam
+        for (let k = 0; k < n; k++) {
+          const ph2 = ((k / n) + st * 1.2) % 1;
+          const sy2 = topY + (to.y - topY) * ph2;
+          const sx2 = to.x + jitter(k, bw * 0.8);
+          const rs = (4 + (k % 3) * 2) * E.scale * (0.6 + 0.4 * Math.sin(st * 30 + k));
+          ctx.strokeStyle = `rgba(255,255,255,${0.9 - ph2 * 0.3})`; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(sx2 - rs, sy2); ctx.lineTo(sx2 + rs, sy2);
+          ctx.moveTo(sx2, sy2 - rs); ctx.lineTo(sx2, sy2 + rs); ctx.stroke();
         }
         break;
       }
