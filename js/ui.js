@@ -567,22 +567,36 @@ function animCanvas(attackerEl, targetEl) {
   return { canvas, ctx, from, to };
 }
 
+// Ownership token: when animations overlap (or one is aborted), only the
+// LATEST run may clear/hide the shared canvas — an older run finishing late
+// must not blank out the new one mid-flight.
+let _canvasRunToken = 0;
+
 function runCanvas(canvas, ctx, duration, drawFn) {
   return new Promise(resolve => {
     const scaledDuration = duration / battleSpeedMultiplier;
-    const start = performance.now();
+    const token = ++_canvasRunToken;
+    // The clock starts at the FIRST PAINTED FRAME, not at scheduling time —
+    // on busy frames the first RAF can arrive late enough to skip the whole
+    // travel phase (seen as "only the impact sparks appeared").
+    let start = null;
     function frame(now) {
+      if (token !== _canvasRunToken) { resolve(); return; } // superseded
+      if (start === null) start = now;
       const t = Math.min((now - start) / scaledDuration, 1);
       try {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawFn(ctx, t);
       } catch(e) {
-        canvas.style.display = 'none';
+        if (token === _canvasRunToken) canvas.style.display = 'none';
         resolve();
         return;
       }
       if (t < 1) requestAnimationFrame(frame);
-      else { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.style.display = 'none'; resolve(); }
+      else {
+        if (token === _canvasRunToken) { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.style.display = 'none'; }
+        resolve();
+      }
     }
     requestAnimationFrame(frame);
   });
@@ -591,8 +605,11 @@ function runCanvas(canvas, ctx, duration, drawFn) {
 function runParticleCanvas(canvas, ctx, particles, duration) {
   return new Promise(resolve => {
     const scaledDuration = duration / battleSpeedMultiplier;
-    const start = performance.now();
+    const token = ++_canvasRunToken;
+    let start = null;
     function frame(now) {
+      if (token !== _canvasRunToken) { resolve(); return; } // superseded
+      if (start === null) start = now;
       const elapsed = now - start;
       const scaledElapsed = elapsed * battleSpeedMultiplier;
       try {
@@ -600,9 +617,12 @@ function runParticleCanvas(canvas, ctx, particles, duration) {
         let anyAlive = false;
         for (const p of particles) { p.tick(scaledElapsed); if (p.alive) { p.draw(ctx); anyAlive = true; } }
         if (elapsed < scaledDuration || anyAlive) requestAnimationFrame(frame);
-        else { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.style.display = 'none'; resolve(); }
+        else {
+          if (token === _canvasRunToken) { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.style.display = 'none'; }
+          resolve();
+        }
       } catch(e) {
-        canvas.style.display = 'none';
+        if (token === _canvasRunToken) canvas.style.display = 'none';
         resolve();
       }
     }
@@ -825,7 +845,11 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
   const travel = (st) => {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter'; // additive glow — colors bloom
-    ctx.shadowColor = `rgba(${rgb},0.85)`; ctx.shadowBlur = 18 * E.scale;
+    ctx.shadowColor = `rgba(${rgb},0.85)`;
+    // shadowBlur is the classic canvas cost sink — keep it modest, and the
+    // gradient-heavy motions below zero it out entirely (their glow is baked
+    // into the radial gradients already).
+    ctx.shadowBlur = ['flamejet', 'waterjet', 'swarm', 'vines', 'spray'].includes(fx.motion) ? 0 : 10 * E.scale;
     switch (fx.motion) {
 
       case 'comet': { // normal/fighting: energy comet with flickering tongues
