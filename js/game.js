@@ -902,8 +902,7 @@ async function doBattleNode(node) {
   // and AT node level from map 5 on (the old curve grew to −4 late, which
   // made the endgame a farming stroll).
   const reduction = state.isEndlessMode ? 0
-    : state.currentMap <= 1 ? 2
-    : state.currentMap <= 3 ? 1
+    : state.currentMap <= 1 ? 1
     : 0;
   const level = Math.max(1, getLevelForNode(node) - reduction);
   let choices = await getCatchChoices(getEncounterMapIndex(), 3, getCatchGenRange().maxGenId, !state.isEndlessMode, getCatchGenRange().minGenId);
@@ -956,8 +955,8 @@ async function doBattleNode(node) {
 function gymBuildOpts() {
   const m = state.currentMap;
   return {
-    teamSize: m === 0 ? 3 : m === 1 ? 4 : m === 2 ? 5 : 6,
-    fillerSpread: m <= 2 ? 4 : m <= 4 ? 3 : m <= 6 ? 2 : 1,
+    teamSize: m === 0 ? 4 : m === 1 ? 5 : 6,
+    fillerSpread: m <= 2 ? 3 : m <= 4 ? 3 : m <= 6 ? 2 : 1,
   };
 }
 
@@ -2047,8 +2046,7 @@ async function doTrainerNode(node) {
   // maps (the team is small) and climb to +1 ABOVE it on maps 7-8, so late
   // routes stay dangerous. Gym leaders / rival / Elite 4 unaffected.
   const trainerReduction = state.isEndlessMode ? 0
-    : state.currentMap <= 1 ? 2
-    : state.currentMap <= 3 ? 1
+    : state.currentMap <= 1 ? 1
     : state.currentMap >= 6 ? -1
     : 0;
   const level = Math.max(1, getLevelForNode(node) - trainerReduction);
