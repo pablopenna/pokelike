@@ -2375,3 +2375,121 @@ function saveHallOfFameEntry(team, runNumber, hardMode, endless = false, stageNu
   if (entries.length > HOF_MAX_ENTRIES) entries.splice(0, entries.length - HOF_MAX_ENTRIES);
   localStorage.setItem('poke_hall_of_fame', JSON.stringify(entries));
 }
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MEGA EVOLUTION — modeled on upstream pokelike.xyz's system, adapted to this
+// fork's progression:
+//   • The Mega Bracelet unlocks the system — earned by clearing Battle Tower
+//     stage 3 (Hoenn).
+//   • A species' Mega Stone unlocks by WINNING a campaign run with that
+//     evolution line on your team.
+//   • A Pokémon holding its stone stays Mega-Evolved for the whole journey —
+//     remove the stone and it reverts (stats/types/sprite swap; speciesId is
+//     never touched, so dex/evolution logic is unaffected).
+// Unlocked stones are injected into the bag at the start of every run.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const MEGA_FORMS = {
+  3:  { megaId: 10033, megaName: "Venusaur", types: ["Grass","Poison"], baseStats: { hp:80, atk:100, def:123, speed:80, special:122, spdef:120 } },
+  6:  { megaId: 10034, megaName: "Charizard", types: ["Fire","Dragon"], baseStats: { hp:78, atk:130, def:111, speed:100, special:130, spdef:85 } },
+  9:  { megaId: 10036, megaName: "Blastoise", types: ["Water"], baseStats: { hp:79, atk:103, def:120, speed:78, special:135, spdef:115 } },
+  65:  { megaId: 10037, megaName: "Alakazam", types: ["Psychic"], baseStats: { hp:55, atk:50, def:65, speed:150, special:175, spdef:105 } },
+  94:  { megaId: 10038, megaName: "Gengar", types: ["Ghost","Poison"], baseStats: { hp:60, atk:65, def:80, speed:130, special:170, spdef:95 } },
+  115:  { megaId: 10039, megaName: "Kangaskhan", types: ["Normal"], baseStats: { hp:105, atk:125, def:100, speed:100, special:60, spdef:100 } },
+  127:  { megaId: 10040, megaName: "Pinsir", types: ["Bug","Flying"], baseStats: { hp:65, atk:155, def:120, speed:105, special:65, spdef:90 } },
+  130:  { megaId: 10041, megaName: "Gyarados", types: ["Water","Dark"], baseStats: { hp:95, atk:155, def:109, speed:81, special:70, spdef:130 } },
+  142:  { megaId: 10042, megaName: "Aerodactyl", types: ["Rock","Flying"], baseStats: { hp:80, atk:135, def:85, speed:150, special:70, spdef:95 } },
+  181:  { megaId: 10045, megaName: "Ampharos", types: ["Electric","Dragon"], baseStats: { hp:90, atk:95, def:105, speed:45, special:165, spdef:110 } },
+  212:  { megaId: 10046, megaName: "Scizor", types: ["Bug","Steel"], baseStats: { hp:70, atk:150, def:140, speed:75, special:65, spdef:100 } },
+  214:  { megaId: 10047, megaName: "Heracross", types: ["Bug","Fighting"], baseStats: { hp:80, atk:185, def:115, speed:75, special:40, spdef:105 } },
+  229:  { megaId: 10048, megaName: "Houndoom", types: ["Dark","Fire"], baseStats: { hp:75, atk:90, def:90, speed:115, special:140, spdef:90 } },
+  248:  { megaId: 10049, megaName: "Tyranitar", types: ["Rock","Dark"], baseStats: { hp:100, atk:164, def:150, speed:71, special:95, spdef:120 } },
+  254:  { megaId: 10065, megaName: "Sceptile", types: ["Grass","Dragon"], baseStats: { hp:70, atk:110, def:75, speed:145, special:145, spdef:85 } },
+  257:  { megaId: 10050, megaName: "Blaziken", types: ["Fire","Fighting"], baseStats: { hp:80, atk:160, def:80, speed:100, special:130, spdef:80 } },
+  260:  { megaId: 10064, megaName: "Swampert", types: ["Water","Ground"], baseStats: { hp:100, atk:150, def:110, speed:70, special:95, spdef:110 } },
+  282:  { megaId: 10051, megaName: "Gardevoir", types: ["Psychic","Fairy"], baseStats: { hp:68, atk:85, def:65, speed:100, special:165, spdef:135 } },
+  302:  { megaId: 10066, megaName: "Sableye", types: ["Dark","Ghost"], baseStats: { hp:50, atk:85, def:125, speed:20, special:85, spdef:115 } },
+  303:  { megaId: 10052, megaName: "Mawile", types: ["Steel","Fairy"], baseStats: { hp:50, atk:105, def:125, speed:50, special:55, spdef:95 } },
+  306:  { megaId: 10053, megaName: "Aggron", types: ["Steel"], baseStats: { hp:70, atk:140, def:230, speed:50, special:60, spdef:80 } },
+  308:  { megaId: 10054, megaName: "Medicham", types: ["Fighting","Psychic"], baseStats: { hp:60, atk:100, def:85, speed:100, special:80, spdef:85 } },
+  310:  { megaId: 10055, megaName: "Manectric", types: ["Electric"], baseStats: { hp:70, atk:75, def:80, speed:135, special:135, spdef:80 } },
+  319:  { megaId: 10070, megaName: "Sharpedo", types: ["Water","Dark"], baseStats: { hp:70, atk:140, def:70, speed:105, special:110, spdef:65 } },
+  323:  { megaId: 10087, megaName: "Camerupt", types: ["Fire","Ground"], baseStats: { hp:70, atk:120, def:100, speed:20, special:145, spdef:105 } },
+  334:  { megaId: 10067, megaName: "Altaria", types: ["Dragon","Fairy"], baseStats: { hp:75, atk:110, def:110, speed:80, special:110, spdef:105 } },
+  354:  { megaId: 10056, megaName: "Banette", types: ["Ghost"], baseStats: { hp:64, atk:165, def:75, speed:75, special:93, spdef:83 } },
+  359:  { megaId: 10057, megaName: "Absol", types: ["Dark"], baseStats: { hp:65, atk:150, def:60, speed:115, special:115, spdef:60 } },
+  362:  { megaId: 10074, megaName: "Glalie", types: ["Ice"], baseStats: { hp:80, atk:120, def:80, speed:100, special:120, spdef:80 } },
+  373:  { megaId: 10089, megaName: "Salamence", types: ["Dragon","Flying"], baseStats: { hp:95, atk:145, def:130, speed:120, special:120, spdef:90 } },
+  376:  { megaId: 10076, megaName: "Metagross", types: ["Steel","Psychic"], baseStats: { hp:80, atk:145, def:150, speed:110, special:105, spdef:110 } },
+};
+
+function megaStoneItem(baseId) {
+  const m = MEGA_FORMS[baseId];
+  if (!m) return null;
+  return {
+    id: 'mega_stone_' + baseId,
+    megaBaseId: Number(baseId),
+    name: m.megaName + 'ite',
+    icon: '💠',
+    desc: `Mega Stone — while ${m.megaName} holds it, it becomes Mega ${m.megaName}. Remove it to revert.`,
+  };
+}
+
+// ---- persistence (account-level, like the dex) ----
+function hasMegaBracelet() {
+  try { return localStorage.getItem('poke_mega_bracelet') === '1'; } catch { return false; }
+}
+function grantMegaBracelet() {
+  if (hasMegaBracelet()) return false;
+  try { localStorage.setItem('poke_mega_bracelet', '1'); } catch {}
+  return true;
+}
+function getMegaStones() {
+  try { return new Set(JSON.parse(localStorage.getItem('poke_mega_stones') || '[]')); } catch { return new Set(); }
+}
+function unlockMegaStone(baseId) {
+  const s = getMegaStones();
+  if (s.has(baseId)) return false;
+  s.add(baseId);
+  try { localStorage.setItem('poke_mega_stones', JSON.stringify([...s])); } catch {}
+  return true;
+}
+
+// ---- transformation (speciesId stays untouched) ----
+function applyMegaForm(p) {
+  const m = MEGA_FORMS[p.speciesId];
+  if (!m || p._megaBase) return false;
+  p._megaBase = { name: p.name, types: p.types, baseStats: p.baseStats, spriteUrl: p.spriteUrl, maxHp: p.maxHp };
+  const ratio = p.maxHp > 0 ? p.currentHp / p.maxHp : 1;
+  p.name = 'Mega ' + m.megaName;
+  p.types = [...m.types];
+  p.baseStats = { ...m.baseStats };
+  p.spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.isShiny ? 'shiny/' : ''}${m.megaId}.png`;
+  const hpBuff = p.statBuffs?.hp ?? 0;
+  p.maxHp = Math.floor(calcHp(m.baseStats.hp, p.level) * (1 + 0.1 * hpBuff));
+  p.currentHp = p.currentHp <= 0 ? 0 : Math.max(1, Math.round(p.maxHp * ratio));
+  return true;
+}
+function revertMegaForm(p) {
+  const b = p._megaBase;
+  if (!b) return false;
+  const ratio = p.maxHp > 0 ? p.currentHp / p.maxHp : 1;
+  p.name = b.name; p.types = b.types; p.baseStats = b.baseStats; p.spriteUrl = b.spriteUrl;
+  const hpBuff = p.statBuffs?.hp ?? 0;
+  p.maxHp = Math.floor(calcHp(b.baseStats.hp, p.level) * (1 + 0.1 * hpBuff));
+  p.currentHp = p.currentHp <= 0 ? 0 : Math.max(1, Math.round(p.maxHp * ratio));
+  delete p._megaBase;
+  return true;
+}
+// Holding the matching stone ⇒ Mega; anything else ⇒ base form.
+function syncMegaState(p) {
+  const holdsStone = !!(p.heldItem && p.heldItem.megaBaseId === p.speciesId);
+  if (holdsStone && !p._megaBase) return applyMegaForm(p);
+  if (!holdsStone && p._megaBase) return revertMegaForm(p);
+  return false;
+}
+function syncTeamMegaStates() {
+  if (typeof state === 'undefined' || !Array.isArray(state.team)) return;
+  for (const p of state.team) syncMegaState(p);
+}

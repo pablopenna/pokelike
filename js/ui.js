@@ -3323,6 +3323,43 @@ function showMapNotification(msg) {
 }
 
 // Render trainer sprites on both battle sides
+
+// ─── Mega Stones collection modal ─────────────────────────────────────────────
+function openMegaModal() {
+  const existing = document.getElementById('mega-modal');
+  if (existing) { existing.remove(); return; }
+  const owned = getMegaStones();
+  const bracelet = hasMegaBracelet();
+  const SPRITES = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
+  const cards = Object.entries(MEGA_FORMS).map(([baseId, m]) => {
+    const has = owned.has(Number(baseId));
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:86px;padding:8px 2px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;${has ? '' : 'opacity:0.45;filter:grayscale(0.9);'}">
+      <img src="${SPRITES}${m.megaId}.png" loading="lazy" style="width:56px;height:56px;image-rendering:pixelated;" onerror="this.style.visibility='hidden'">
+      <div style="font-size:7px;font-family:'Press Start 2P',monospace;text-align:center;">Mega ${m.megaName}</div>
+      <div style="font-size:7px;color:${has ? 'var(--green)' : 'var(--text-dim)'};">${has ? '💠 ' + m.megaName + 'ite' : 'Locked'}</div>
+    </div>`;
+  }).join('');
+  const modal = document.createElement('div');
+  modal.id = 'mega-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:var(--bg-main);color:var(--text-main);border-radius:12px;max-width:640px;width:94%;max-height:86vh;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);">
+        <div style="font-family:'Press Start 2P',monospace;font-size:11px;">💠 Mega Stones</div>
+        <button onclick="document.getElementById('mega-modal').remove()" style="background:none;border:none;font-size:16px;cursor:pointer;color:inherit;">✕</button>
+      </div>
+      <div style="padding:10px 16px;font-size:11px;line-height:1.6;border-bottom:1px solid var(--border);">
+        ${bracelet
+          ? '🧿 <b>Mega Bracelet owned.</b> Unlocked stones appear in your bag every run — equip one on its Pokémon to keep it Mega-Evolved for the whole journey (remove it to revert).'
+          : '🧿 <b>Mega Bracelet missing.</b> Clear <b>Battle Tower stage 3 (Hoenn)</b> to unlock Mega Evolution.'}
+        Win a run with a line on your team to earn its stone (${owned.size}/${Object.keys(MEGA_FORMS).length}).
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;padding:14px 16px;overflow-y:auto;">${cards}</div>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
 function renderTrainerIcons(gender, enemyName = null, showPlayer = true) {
   const playerEl = document.getElementById('player-trainer-icon');
   const enemyEl  = document.getElementById('enemy-trainer-icon');
@@ -3492,6 +3529,8 @@ async function checkAndEvolveTeam() {
   } finally {
     _evolveInProgress = false;
   }
+  // A holder that just evolved into its stone's species Mega Evolves now.
+  if (typeof syncTeamMegaStates === 'function') syncTeamMegaStates();
 }
 
 // Animate level-up events returned by applyLevelGain

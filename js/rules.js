@@ -229,6 +229,10 @@ const _GUIDE_SECTIONS = [
       <li><b>Bag items</b> are consumables used from the map or prep screens: Rare Candy, Max Revive,
       Full Restore, TMs, Escape Rope (revive after a lost non-boss battle)…</li>
       <li>Enemy aces carry held items too — Gym Leaders and the Elite Four fight equipped, in every region.</li>
+      <li><b>Mega Stones</b>: clear Battle Tower stage 3 to earn the Mega Bracelet, then win runs with a
+      Mega-capable line on your team to unlock its stone. A Pokémon holding its stone stays
+      <b>Mega-Evolved</b> for the whole journey (new stats, types and look) — remove the stone to revert.
+      Your collection lives behind the 💠 button on the title screen.</li>
     </ul>` },
   { id: 'league', icon: '🏆', title: 'Gyms & the League', html: `
     <ul>

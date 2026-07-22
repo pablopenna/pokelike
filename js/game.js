@@ -240,6 +240,14 @@ async function startNewRun(nuzlockeMode = false, gen = '1', forcedStarterId = nu
     // Which villain team ambushes this run (rival-slot encounters).
     state.villainTeam = rng() < 0.5 ? 'aqua' : 'magma';
   }
+  // Mega Evolution: every unlocked Mega Stone starts in the bag (key items —
+  // they re-materialize each run from the account collection).
+  if (hasMegaBracelet()) {
+    for (const id of getMegaStones()) {
+      const stone = megaStoneItem(id);
+      if (stone) state.items.push(stone);
+    }
+  }
   if (bothGens) {
     // Roll which generation's leader appears at each gym slot, and a random
     // Elite Four lineup (4 members + champion), mixing all generations.
@@ -1700,6 +1708,7 @@ function openItemEquipModal(item, { fromBagIdx = -1, fromPokemonIdx = -1, onComp
         state.items.push(pokemon.heldItem);
         pokemon.heldItem = null;
       }
+      syncTeamMegaStates();
       modal.remove();
       done();
     });
@@ -1724,6 +1733,7 @@ function openItemEquipModal(item, { fromBagIdx = -1, fromPokemonIdx = -1, onComp
       }
 
       pokemon.heldItem = item;
+      syncTeamMegaStates();
       modal.remove();
       done();
     });
@@ -1732,6 +1742,7 @@ function openItemEquipModal(item, { fromBagIdx = -1, fromPokemonIdx = -1, onComp
   modal.querySelector('#btn-equip-to-bag').addEventListener('click', () => {
     if (fromPokemonIdx >= 0) {
       state.team[fromPokemonIdx].heldItem = null;
+      syncTeamMegaStates();
       state.items.push(item);
     } else if (fromBagIdx < 0) {
       // Brand new item — put in bag
@@ -2873,6 +2884,23 @@ function showWinScreen() {
   }).join('');
   document.getElementById('btn-play-again').onclick = () => startNewRun(state.nuzlockeMode, getRunGen(), null, { retryOnWipe: state.retryOnWipe !== false });
 
+  // Mega Stones: winning a run with a line on your team unlocks that line's
+  // stone (bracelet-gated visibility, but the unlock always records).
+  try {
+    const teamRoots = new Set(state.team.map(p => getEvoLineRoot(p.speciesId)));
+    let toastDelay = 4200;
+    for (const baseId of Object.keys(MEGA_FORMS).map(Number)) {
+      if (!teamRoots.has(getEvoLineRoot(baseId))) continue;
+      if (unlockMegaStone(baseId)) {
+        const m = MEGA_FORMS[baseId];
+        const d = toastDelay; toastDelay += 900;
+        setTimeout(() => showAchievementToast({ icon: '💠', name: `${m.megaName}ite obtained!`,
+          desc: hasMegaBracelet() ? `${m.megaName} can now Mega Evolve — equip its stone.`
+                                  : 'Earn the Mega Bracelet (Battle Tower stage 3) to use it.' }), d);
+      }
+    }
+  } catch {}
+
   // Track elite four wins
   const wins = incrementEliteWins();
   saveHallOfFameEntry(state.team, wins, state.nuzlockeMode, false, null, state.starterSpeciesId, state.gen2Mode, getRunGen());
@@ -3651,6 +3679,11 @@ function advanceEndless() {
       const completedStage = endlessState.stageNumber;
       saveHallOfFameEntry(state.team, completedStage, false, true, completedStage, state.starterSpeciesId);
       unlockNextStage(completedStage);
+      // Mega Bracelet: clearing the Hoenn tower stage unlocks Mega Evolution.
+      if (completedStage >= 3 && grantMegaBracelet()) {
+        setTimeout(() => showAchievementToast({ icon: '🧿', name: 'Mega Bracelet obtained!',
+          desc: 'Mega Evolution unlocked — win runs with a Mega-capable line to earn its stone.' }), 2500);
+      }
       [1, 2, 3, 4, 5].forEach(threshold => {
         if (completedStage === threshold) {
           const ach = unlockAchievement(`endless_stage_${threshold}`);
