@@ -2474,7 +2474,7 @@ function chooseEnemyAction(active, team, idx, playerActive, switchedLast) {
 const BATTLE_ABORTED = Symbol('battle-aborted');
 
 async function runInteractiveBattle(pTeamRaw, eTeamRaw, enemyItems, opts = {}) {
-  const ctx = makeBattleContext(pTeamRaw, eTeamRaw, {});
+  const ctx = makeBattleContext(pTeamRaw, eTeamRaw, { traitsConfig: opts.traitsConfig || null });
   const { pTeam, eTeam } = ctx;
   const hpTrack = { player: pTeam.map(p => p.currentHp), enemy: eTeam.map(p => p.currentHp) };
   const myGen = runGeneration;
@@ -2492,6 +2492,7 @@ async function runInteractiveBattle(pTeamRaw, eTeamRaw, enemyItems, opts = {}) {
   let enemySwitchedLast = false;
   const io = {
     interactive: true,
+    allowStruggle: !!opts.allowStruggle, // Battle Tower manual mode
     playerAction: async c => {
       battleSpeedMultiplier = _battleAuto ? SKIP_SPEED : 1;
       const action = await awaitPlayerAction(pTeam, c.pIdx, eTeam[c.eIdx]);
@@ -2515,8 +2516,9 @@ async function runInteractiveBattle(pTeamRaw, eTeamRaw, enemyItems, opts = {}) {
   try {
     while (!battleOver(ctx)) {
       // Mutual immunity: neither side can ever land a hit — hand the standoff
-      // back to runBattleScreen for a graceful flee/retreat ending.
-      if (battleIsDeadlocked(pTeam, eTeam)) return { ...result(false), deadlock: true };
+      // back to runBattleScreen for a graceful flee/retreat ending. Not needed
+      // when Struggle is allowed (Battle Tower manual): the battle always resolves.
+      if (!opts.allowStruggle && battleIsDeadlocked(pTeam, eTeam)) return { ...result(false), deadlock: true };
       await runBattleRound(ctx, io);
       if (aborted()) return result(false);
 
@@ -2605,7 +2607,8 @@ function runBattleScreen(enemyTeam, isBoss, onWin, onLose, enemyName = null, ene
     let manuallySkipped = false;
     let playerWon, resultP, resultE, playerParticipants;
 
-    if (state.isEndlessMode) {
+    const endlessManual = state.isEndlessMode && !!settings.endlessManual;
+    if (state.isEndlessMode && !endlessManual) {
       // ── Auto path (precompute + animate) — keeps Battle Tower traits intact ──
       const r = await runBattle(pTeamCopy, enemyTeam, state.items, enemyItems, null, traitsConfig);
       playerWon = r.playerWon; resultP = r.pTeam; resultE = r.eTeam; playerParticipants = r.playerParticipants;
@@ -2628,14 +2631,18 @@ function runBattleScreen(enemyTeam, isBoss, onWin, onLose, enemyName = null, ene
       document.getElementById('battle-msg-box')?.remove();
       if (battleAborted()) return;
     } else {
-      // ── Interactive turn-based path (normal mode) ──
+      // ── Interactive turn-based path (campaign, and Battle Tower manual mode) ──
       skipBtn.style.display = 'none';
       continueEl.style.display = 'none';
       continueEl.textContent = 'Continue';
       continueEl.disabled = false;
       battleSpeedMultiplier = 1;
       _battleAuto = false;
-      const res = await runInteractiveBattle(pTeamCopy, eTeamInit, enemyItems, { isBoss, enemyName });
+      const res = await runInteractiveBattle(pTeamCopy, eTeamInit, enemyItems, {
+        isBoss, enemyName,
+        traitsConfig: state.isEndlessMode ? traitsConfig : null,
+        allowStruggle: state.isEndlessMode,
+      });
       document.getElementById('battle-command').style.display = 'none';
       document.getElementById('battle-party-select').style.display = 'none';
       document.getElementById('overtime-banner')?.remove();
@@ -3328,7 +3335,16 @@ function showEndlessMapScreen() {
   const mapInfo = document.getElementById('map-info');
   if (mapInfo) {
     const label = isFinalBoss ? 'STAGE FINAL BOSS' : isBoss ? 'BIG BOSS' : `Map ${mapNum}/2`;
-    mapInfo.innerHTML = `<span style="font-size:9px">${getStageName(endlessState.stageNumber)} R${endlessState.regionNumber} — ${label}: <b>${trainerName}</b></span>`;
+    const manual = !!getSettings().endlessManual;
+    mapInfo.innerHTML = `<span style="font-size:9px">${getStageName(endlessState.stageNumber)} R${endlessState.regionNumber} — ${label}: <b>${trainerName}</b></span>
+      <button id="btn-endless-battle-mode" class="btn-secondary" style="font-size:9px;padding:3px 8px;margin-left:8px;vertical-align:middle;"
+        title="How the next battles are fought">${manual ? '🎮 Manual' : '⚡ Auto'}</button>`;
+    document.getElementById('btn-endless-battle-mode').onclick = () => {
+      const s = getSettings();
+      s.endlessManual = !s.endlessManual;
+      saveSettings(s);
+      showEndlessMapScreen();
+    };
   }
 
   const badgeCountEl = document.getElementById('badge-count');

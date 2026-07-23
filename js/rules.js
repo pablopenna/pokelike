@@ -46,7 +46,7 @@ const POKELIKE_RULES = {
     nuzlocke:
       "Nuzlocke — hardcore. Any Pokémon that faints in battle is lost permanently (exception: rival/Silver " +
       "battles don't permanently faint your team if you win). Trade nodes are available. A wipe always ends the run.",
-    battle_tower: "Battle Tower — endless auto-battle gauntlet for score; separate from the main run.",
+    battle_tower: "Battle Tower — endless battle gauntlet for score; separate from the main run. Battles resolve automatically by default; a Manual/Auto toggle on the Tower map screen switches to turn-based play (pick attacks and switch, same controls as the campaign; traits still apply).",
   },
 
   map: {
@@ -249,8 +249,11 @@ const _GUIDE_SECTIONS = [
     </ul>` },
   { id: 'tower', icon: '🗼', title: 'Battle Tower', html: `
     <ul>
-      <li>An endless <b>auto-battle</b> gauntlet, separate from the campaign — unlock it by beating the
+      <li>An endless battle gauntlet, separate from the campaign — unlock it by beating the
       game once. Higher stages unlock later generations (up to #649).</li>
+      <li>Battles resolve <b>automatically</b> by default. The <b>⚡ Auto / 🎮 Manual</b> button on the
+      Tower map switches to turn-based play — you pick attacks and switch like in the campaign, and
+      the Tower's type traits keep working.</li>
       <li><b>Type traits</b> are the Tower's core: stacking same-type Pokémon on your team unlocks tiered
       passive powers (Fire: attack boosts · Steel: damage guard, pierced by super-effective hits ·
       Flying: dodges · Ghost: executes…). Enemy themed teams have traits too — check the region preview

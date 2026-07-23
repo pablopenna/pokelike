@@ -296,9 +296,10 @@ function executeTurn(ctx, io, turn, action, roundState) {
 
   let move = action.move;
   // If both sides are stuck with useless moves, force Struggle on both to
-  // break the stalemate — Battle Tower (auto) only: campaign battles never
-  // show Struggle, the moves simply keep failing.
-  if (bothUseless && !io.interactive) {
+  // break the stalemate — Battle Tower only (auto, or manual via
+  // io.allowStruggle): campaign battles never show Struggle, the moves
+  // simply keep failing.
+  if (bothUseless && (!io.interactive || io.allowStruggle)) {
     move = STRUGGLE();
   }
   // Immunity (×0): a manually-chosen move is respected and simply fails
@@ -310,7 +311,7 @@ function executeTurn(ctx, io, turn, action, roundState) {
     const alt = getMovesForPokemon(attacker)
       .filter(m => !m.noDamage && getTypeEffectiveness(m.type, target.types || ['Normal']) > 0)
       .sort((a, b) => (b.power || 0) - (a.power || 0))[0];
-    move = alt || (io.interactive ? move : STRUGGLE());
+    move = alt || (io.interactive && !io.allowStruggle ? move : STRUGGLE());
   }
   const attackerItems = side === 'player' ? pActiveItems : eActiveItems;
   const defenderItems = side === 'player' ? eActiveItems : pActiveItems;

@@ -2650,6 +2650,35 @@ async function animateInteractiveEvents(events, pTeam, eTeam, hpTrack) {
         document.getElementById('battle-screen')?.prepend(banner);
       }
       await sleep(800);
+
+    // Battle Tower traits in manual mode: announce the proc; any HP change
+    // arrives as a separate 'effect'/'confusion' event.
+    } else if (ev.type === 'trait_trigger') {
+      const el = elFor(ev.side, ev.idx);
+      if (el) {
+        const popup = document.createElement('div');
+        popup.className = 'crit-popup';
+        popup.textContent = `${ev.traitType} Trait!`;
+        el.appendChild(popup);
+        setTimeout(() => popup.remove(), 800);
+      }
+      await sleep(250);
+
+    } else if (ev.type === 'confusion') {
+      const el = elFor(ev.side, ev.idx);
+      const track = hpTrack[ev.side];
+      if (el) {
+        const popup = document.createElement('div');
+        popup.className = 'crit-popup';
+        popup.textContent = 'Hurt itself!';
+        el.appendChild(popup);
+        setTimeout(() => popup.remove(), 800);
+        el.classList.add('hit-normal');
+        await animateHpBar(el, track[ev.idx], ev.hpAfter, maxFor(ev.side, ev.idx));
+        track[ev.idx] = ev.hpAfter;
+        el.classList.remove('hit-normal');
+      }
+      await sleep(200);
     }
   }
 }
