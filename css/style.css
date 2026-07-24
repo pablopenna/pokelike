@@ -1263,22 +1263,76 @@ h1, h2, .pixel-font {
 #elite-prep-items { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-height: 22px; }
 #btn-elite-prep-continue { margin-top: 8px; }
 
-/* ---- Game Over Screen ---- */
+/* ---- Level Retry Screen (blacked out) ---- */
 #gameover-screen {
   align-items: center;
   justify-content: center;
-  gap: 20px;
   text-align: center;
+  padding: 16px;
   background: radial-gradient(circle, #2a0000 0%, var(--bg) 70%);
+}
+.gameover-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: min(420px, 94vw);
+  padding: 26px 20px 22px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 90, 80, 0.35);
+  background: linear-gradient(180deg, rgba(34, 12, 12, 0.94), rgba(16, 8, 8, 0.96));
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+              0 0 44px rgba(255, 60, 40, 0.14);
+  animation: retry-pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+@keyframes retry-pop {
+  from { transform: scale(0.92) translateY(12px); opacity: 0; }
 }
 .gameover-title {
   font-family: 'Press Start 2P', monospace;
-  font-size: clamp(16px,4vw,32px);
+  font-size: clamp(13px, 3.6vw, 20px);
+  line-height: 1.5;
   color: var(--red);
-  text-shadow: 0 0 20px var(--red);
+  text-shadow: 0 0 18px var(--red);
 }
-#gameover-badges { color: var(--text-dim); font-size: 14px; }
-#gameover-team { color: var(--text-dim); font-size: 12px; max-width: 500px; }
+#gameover-badges { color: var(--text-dim); font-size: 11px; }
+#gameover-badges b { color: var(--text); }
+#gameover-team {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.ko-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px 4px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.ko-chip img {
+  width: 44px;
+  height: 44px;
+  image-rendering: pixelated;
+  filter: grayscale(1) brightness(0.7);
+}
+.ko-chip span { font-size: 8px; color: var(--text-dim); }
+.gameover-cta {
+  width: 100%;
+  max-width: 260px;
+  font-size: 14px;
+  padding: 14px 18px;
+}
+.gameover-hint {
+  font-size: 10px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  max-width: 320px;
+}
 
 /* ---- Win Screen ---- */
 #win-screen {

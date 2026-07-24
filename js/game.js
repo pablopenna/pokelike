@@ -2872,21 +2872,26 @@ function showLevelRetryScreen() {
   if (titleEl) titleEl.textContent = 'You blacked out!';
 
   const badgesEl = document.getElementById('gameover-badges');
-  if (badgesEl) badgesEl.textContent = `Badges: ${state.badges} — Level ${state.currentMap + 1}`;
+  if (badgesEl) badgesEl.innerHTML =
+    `Level <b>${state.currentMap + 1}</b> · ${state.badges} badge${state.badges === 1 ? '' : 's'}`;
 
+  // Compact fainted-team strip — the run isn't lost, no need for full cards.
   const teamEl = document.getElementById('gameover-team');
   if (teamEl) {
-    teamEl.innerHTML = state.team.map(p => {
-      const itemHtml = p.heldItem
-        ? `<div style="display:flex;align-items:center;gap:4px;font-size:8px;color:var(--text-dim);margin-top:4px;">${itemIconHtml(p.heldItem, 14)}<span>${p.heldItem.name}</span></div>`
-        : '';
-      return `<div style="display:flex;flex-direction:column;align-items:center;">${renderPokemonCard(p, false, false)}${itemHtml}</div>`;
-    }).join('');
+    teamEl.innerHTML = state.team.map(p => `
+      <div class="ko-chip">
+        <img src="${p.spriteUrl}" alt="${p.nickname || p.name}" loading="lazy">
+        <span>Lv${p.level}</span>
+      </div>`).join('');
   }
+
+  const hintEl = document.getElementById('gameover-hint');
+  if (hintEl) hintEl.textContent =
+    'Your team returns to how it was when you entered this level — on a brand-new map. Unlimited retries.';
 
   const retryBtn = document.getElementById('btn-retry');
   if (retryBtn) {
-    retryBtn.textContent = 'Retry Level';
+    retryBtn.textContent = '🔄 Retry Level';
     retryBtn.onclick = retryCurrentMap;
   }
 
