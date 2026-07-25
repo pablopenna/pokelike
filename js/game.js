@@ -2607,7 +2607,9 @@ function runBattleScreen(enemyTeam, isBoss, onWin, onLose, enemyName = null, ene
     let manuallySkipped = false;
     let playerWon, resultP, resultE, playerParticipants;
 
-    const endlessManual = state.isEndlessMode && !!settings.endlessManual;
+    // Battle Tower fights turn-based like the campaign unless the player
+    // explicitly switched the Tower to Auto.
+    const endlessManual = state.isEndlessMode && !settings.endlessAuto;
     if (state.isEndlessMode && !endlessManual) {
       // ── Auto path (precompute + animate) — keeps Battle Tower traits intact ──
       const r = await runBattle(pTeamCopy, enemyTeam, state.items, enemyItems, null, traitsConfig);
@@ -3340,13 +3342,13 @@ function showEndlessMapScreen() {
   const mapInfo = document.getElementById('map-info');
   if (mapInfo) {
     const label = isFinalBoss ? 'STAGE FINAL BOSS' : isBoss ? 'BIG BOSS' : `Map ${mapNum}/2`;
-    const manual = !!getSettings().endlessManual;
+    const manual = !getSettings().endlessAuto;
     mapInfo.innerHTML = `<span style="font-size:9px">${getStageName(endlessState.stageNumber)} R${endlessState.regionNumber} — ${label}: <b>${trainerName}</b></span>
       <button id="btn-endless-battle-mode" class="btn-secondary" style="font-size:9px;padding:3px 8px;margin-left:8px;vertical-align:middle;"
         title="How the next battles are fought">${manual ? '🎮 Manual' : '⚡ Auto'}</button>`;
     document.getElementById('btn-endless-battle-mode').onclick = () => {
       const s = getSettings();
-      s.endlessManual = !s.endlessManual;
+      s.endlessAuto = !s.endlessAuto;
       saveSettings(s);
       showEndlessMapScreen();
     };
