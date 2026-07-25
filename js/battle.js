@@ -629,9 +629,18 @@ function applyLevelGain(team, bagItems, participantIdxs, maxEnemyLevel = 0, hard
     // to ever field again.
 
     const luckyBonus = p.heldItem?.id === 'lucky_egg' && rng() < 0.30 ? 1 : 0;
+    // Catch-up: a mon clearly below the enemies it just fought gains one
+    // extra level. Fills the entry trough of each map (the player arrives at
+    // the previous cap while routes climb toward the new one) and fades out
+    // automatically once the team catches up. Campaign only — the Battle
+    // Tower passes an infinite cap and keeps its own pacing.
+    const catchUp = !Number.isFinite(levelCap) ? 0
+      : p.level < maxEnemyLevel - 3 ? 2
+      : p.level < maxEnemyLevel - 1 ? 1
+      : 0;
     // Fainted members still progress but one level slower (min +1): keeping
     // your team alive earns a real edge, without the old death spiral.
-    const rawGain = baseGain + luckyBonus;
+    const rawGain = baseGain + luckyBonus + catchUp;
     const gain = p.currentHp > 0 ? rawGain : Math.max(1, rawGain - 1);
     const oldLevel = p.level;
     const newLevel = Math.min(oldLevel + gain, levelCap);

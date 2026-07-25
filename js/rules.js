@@ -86,7 +86,7 @@ const POKELIKE_RULES = {
     xp_note:
       "The WHOLE team shares XP; fainted members earn one level less (min +1), so nobody falls behind " +
       "but staying alive pays. A dynamic per-map level cap prevents over-leveling so bosses stay a threat. " +
-      "Route levels climb from the map's minimum up to the cap, so pressure holds until the gym.",
+      "Route levels climb across the map's band (late maps reach near the cap), with wild/catch/trainer fights running a notch below the route level on early maps. Pokémon clearly below the enemies they beat gain extra catch-up XP.",
   },
 
   bosses: {

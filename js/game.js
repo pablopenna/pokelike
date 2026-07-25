@@ -884,11 +884,17 @@ function getLevelForNode(node) {
   // reduction) produced level-1 wilds against a level-5 starter. Early nodes
   // never drop below 3 (catch nodes already floor at 4).
   const _mapFloor = state.currentMap === 0 ? 3 : 1;
-  // The ladder's CEILING is the map's level cap (the leader's ace), not the
-  // nominal 10-level band — otherwise the second half of every map fell far
-  // below the player (e.g. map 5: nodes 41-49 vs a cap of 59) and turned into
-  // a tension-free farming stroll. Nodes now climb mapMin → cap−1.
-  const _ceil = Math.max(getLevelCapForMap() - 1, 1);
+  // The ladder's CEILING blends the nominal band with the map's level cap:
+  // max(bandMax−1, cap−4). Late maps keep routes near the cap (the leader's
+  // ace outruns the band there — a pure-band ladder made them a tension-free
+  // farming stroll), while early maps stay inside their band: the player
+  // enters at the PREVIOUS cap, and a cap−1 ceiling there (e.g. routes at 22
+  // on map 2 while the player arrives at 10) made mid-map attrition lethal.
+  const _runGenPre = getRunGen();
+  const _bandMax = (_runGenPre === '3' ? GEN3_MAP_LEVEL_RANGES
+    : _runGenPre === '2' ? GEN2_MAP_LEVEL_RANGES
+    : MAP_LEVEL_RANGES)[state.currentMap][1];
+  const _ceil = Math.max(1, _bandMax - 1, getLevelCapForMap() - 4);
   // Gen 2/3: deterministic per-layer curve — fixed offsets scaled onto the
   // mapMin..cap−1 span. Boss layer 8 uses leader data, not this function.
   const _runGen = getRunGen();
@@ -908,12 +914,13 @@ function getLevelForNode(node) {
 }
 
 async function doBattleNode(node) {
-  // Difficulty linearization: wild Pokémon run BELOW the node level early
-  // (−2 on maps 1-2, −1 on maps 3-4 — breathing room while the team is tiny)
-  // and AT node level from map 5 on (the old curve grew to −4 late, which
-  // made the endgame a farming stroll).
+  // Difficulty linearization: wild Pokémon run BELOW the node level early —
+  // the player enters each map at the PREVIOUS map's cap while the route
+  // ladder jumps straight toward the new cap, so early maps need real
+  // breathing room (journey sims died mid-route, not at the gym).
   const reduction = state.isEndlessMode ? 0
-    : state.currentMap <= 1 ? 1
+    : state.currentMap <= 1 ? 2
+    : state.currentMap <= 3 ? 1
     : 0;
   const level = Math.max(1, getLevelForNode(node) - reduction);
   let choices = await getCatchChoices(getEncounterMapIndex(), 3, getCatchGenRange().maxGenId, !state.isEndlessMode, getCatchGenRange().minGenId);
@@ -969,7 +976,7 @@ function gymBuildOpts() {
   // toward the leader's type-boost item). Elite fights are always 6.
   const m = state.currentMap;
   return {
-    teamSize: m === 0 ? 3 : m === 1 ? 4 : m === 2 ? 5 : 6,
+    teamSize: m <= 1 ? 3 : m === 2 ? 4 : m === 3 ? 5 : 6,
     fillerSpread: 0,
     equipFiller: true,
   };
@@ -1250,7 +1257,13 @@ async function doCatchNode(node) {
 
     let choices = await getCatchChoices(getEncounterMapIndex(), 18, getCatchGenRange().maxGenId, !state.isEndlessMode, getCatchGenRange().minGenId, state.isEndlessMode);
     const isFirstMap = state.currentMap === 0 || (state.isEndlessMode && endlessState.regionNumber === 1 && endlessState.mapIndexInRegion === 0);
-    level = isFirstMap ? Math.max(4, getLevelForNode(node)) : getLevelForNode(node);
+    // Same early-map breathing room wild battles get — catch fights ran at
+    // full ladder level while the team was still at the previous map's cap.
+    const catchReduction = state.isEndlessMode ? 0
+      : state.currentMap <= 1 ? 2
+      : state.currentMap <= 3 ? 1
+      : 0;
+    level = isFirstMap ? Math.max(4, getLevelForNode(node)) : Math.max(4, getLevelForNode(node) - catchReduction);
     const lvlFiltered = choices.filter(sp => minLevelForSpecies(sp.id ?? sp.speciesId) <= level);
     if (lvlFiltered.length > 0) {
       // Pad with ineligible choices if filtering drops below 3 so there are always 3 options
@@ -2052,7 +2065,7 @@ const TRAINER_BATTLE_CONFIG = {
 // winnable one by one; the walls are the gyms/E4, which run full-strength
 // teams with items). Simulated winrates decline ~100% → ~78% across maps.
 const TRAINER_TEAM_SIZES    = [1, 2, 2, 3, 3, 4, 4, 5, 6];
-const TRAINER_LEVEL_OFFSETS = [-3, -2, -1, -1, -1, -1, -1, -2, -4];
+const TRAINER_LEVEL_OFFSETS = [-3, -3, -2, -1, -1, -1, -1, -2, -4];
 
 async function doTrainerNode(node) {
   const key = node.trainerSprite || 'aceTrainer';
