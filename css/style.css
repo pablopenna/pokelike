@@ -1299,6 +1299,7 @@ h1, h2, .pixel-font {
 }
 #gameover-badges { color: var(--text-dim); font-size: 11px; }
 #gameover-badges b { color: var(--text); }
+.retry-attempts { color: #ff8a80; white-space: nowrap; }
 #gameover-team {
   display: flex;
   flex-wrap: wrap;

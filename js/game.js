@@ -569,6 +569,8 @@ function startMap(mapIndex) {
     maxTeamSize: state.maxTeamSize,
   }));
   state.pendingRetry = false;
+  // Fresh level = fresh attempt counter (retryCurrentMap restores it after).
+  state.mapRetries = 0;
 
   const startNode = state.map.nodes['n0_0'];
   state.currentNode = startNode;
@@ -2864,7 +2866,10 @@ function retryCurrentMap() {
   const newSeed = (Date.now() ^ (Math.random() * 0x100000000 | 0)) >>> 0;
   seedRng(newSeed);
   state.runSeed = newSeed;
+  const attempts = (state.mapRetries || 0) + 1;
   startMap(state.currentMap); // regenerates map + re-heals + re-snapshots
+  state.mapRetries = attempts; // survives startMap's reset; persisted below
+  saveRun();
 }
 
 // Reuses the existing (otherwise unused) #gameover-screen as a "retry the
@@ -2874,8 +2879,10 @@ function showLevelRetryScreen() {
   if (titleEl) titleEl.textContent = 'You blacked out!';
 
   const badgesEl = document.getElementById('gameover-badges');
+  const attemptNum = (state.mapRetries || 0) + 1; // the attempt that just failed
   if (badgesEl) badgesEl.innerHTML =
-    `Level <b>${state.currentMap + 1}</b> · ${state.badges} badge${state.badges === 1 ? '' : 's'}`;
+    `Level <b>${state.currentMap + 1}</b> · ${state.badges} badge${state.badges === 1 ? '' : 's'}`
+    + ` · <span class="retry-attempts">💀 Attempt ${attemptNum}</span>`;
 
   // Compact fainted-team strip — the run isn't lost, no need for full cards.
   const teamEl = document.getElementById('gameover-team');
