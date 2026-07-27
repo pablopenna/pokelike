@@ -36,7 +36,7 @@ All JS files are classic scripts sharing one global scope, loaded in a fixed ord
 - `js/rules.js` — human-readable rules modal **and** a machine-readable spec (`window.POKELIKE_RULES`, mirrored into `<script id="pokelike-llm-spec">`) that documents rules + DOM driving instructions so an LLM can play the game. Update it when gameplay rules change.
 - `js/cloud-save.js` — optional sync to an external server (`save.pokelike.xyz`). The game must keep working when it's unreachable; all fetches have per-call-site timeouts because `initGame()` awaits `initCloudSave()`.
 
-Game modes: Normal / Nuzlocke (permadeath) / Battle Tower; generations Gen 1, Gen 2, Gen 3 (Hoenn, with Team Aqua/Magma rival encounters), or "Tot" (all three mixed; leaders rolled per map, boss levels normalized). Gen selection lives in `state.runGen` ('1'|'2'|'3'|'all') with `getRunGen()` falling back to the legacy `gen2Mode`/`bothGens` booleans for old saves; per-gen tables are centralized in `GEN_RUN_CONFIG` (data.js) — branch new gen logic there, never on new booleans.
+Game modes: Normal / Nuzlocke (permadeath) / Battle Tower; generations Gen 1, Gen 2, Gen 3 (Hoenn, Team Aqua/Magma rivals), Gen 4 (Sinnoh, Team Galactic — unlocked by winning Gen 3), Gen 5 (Unova, Team Plasma — unlocked by winning Gen 4; `isGenBeaten()` reads the Hall of Fame), or "Tot" (gens 1-3 mixed; leaders rolled per map, boss levels normalized). Gen selection lives in `state.runGen` ('1'..'5'|'all') with `getRunGen()` falling back to the legacy `gen2Mode`/`bothGens` booleans for old saves; per-gen tables are centralized in `GEN_RUN_CONFIG` (data.js) — branch new gen logic there, never on new booleans.
 
 ## Conventions
 
