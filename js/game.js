@@ -34,11 +34,60 @@ let state = {
 
 // ---- Run persistence ----
 
+// Cross-tab safety: each run carries a runId and a monotonically increasing
+// saveSeq. A tab may only write the save if it is still the freshest writer —
+// a stale tab (the run advanced elsewhere, or a different run started) shows
+// a takeover notice instead of silently clobbering the active game.
+let _tabStale = false;
+// Set when THIS tab legitimately starts a new run — the first save claims
+// ownership (writes the new runId) without tripping the staleness guard.
+let _forceNextSave = false;
+
+function showTabTakeoverNotice() {
+  if (document.getElementById('tab-takeover-overlay')) return;
+  const ov = document.createElement('div');
+  ov.id = 'tab-takeover-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(8,8,14,0.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px;';
+  ov.innerHTML = `
+    <div style="font-family:'Press Start 2P',monospace;font-size:13px;color:var(--red,#ff5a50);line-height:1.6;">This tab is out of date</div>
+    <div style="font-size:12px;color:#ccc;max-width:420px;line-height:1.6;">The game has progressed in another tab. To avoid losing progress, this tab stopped saving.</div>
+    <button class="btn-primary" onclick="location.reload()" style="font-size:13px;padding:12px 20px;">Resume here</button>`;
+  document.body.appendChild(ov);
+}
+
 function saveRun() {
   try {
+    if (_tabStale) return; // never let a stale tab overwrite fresher progress
+    if (_forceNextSave) {
+      _forceNextSave = false; // claiming a freshly started run — skip the guard once
+    } else {
+      const stored = (() => { try { return JSON.parse(localStorage.getItem('poke_current_run') || 'null'); } catch { return null; } })();
+      if (stored && state.runId && stored.runId && (stored.runId !== state.runId || (stored.saveSeq || 0) > (state.saveSeq || 0))) {
+        _tabStale = true;
+        showTabTakeoverNotice();
+        return;
+      }
+    }
+    state.saveSeq = (state.saveSeq || 0) + 1;
     const saved = { ...state, currentNodeId: state.currentNode?.id || null, currentNode: null, rngSeed: getRngSeed() };
     localStorage.setItem('poke_current_run', JSON.stringify(saved));
   } catch {}
+}
+
+// Live cross-tab watch: when another tab writes a fresher save, mark this tab
+// stale immediately (mid-run only — the title screen re-reads on Continue).
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', e => {
+    if (e.key !== 'poke_current_run' || !e.newValue) return;
+    try {
+      const incoming = JSON.parse(e.newValue);
+      if (!state || !state.runId || !state.starterSpeciesId) return; // no live run here
+      if (incoming.runId !== state.runId || (incoming.saveSeq || 0) > (state.saveSeq || 0)) {
+        _tabStale = true;
+        showTabTakeoverNotice();
+      }
+    } catch {}
+  });
 }
 
 function loadRun() {
@@ -48,6 +97,9 @@ function loadRun() {
     const saved = JSON.parse(raw);
     if (saved.rngSeed) seedRng(saved.rngSeed);
     state = saved;
+    if (!state.runId) state.runId = Date.now() + ':' + Math.floor(Math.random() * 1e9); // adopt legacy saves
+    _tabStale = false; // we just loaded the freshest save — this tab is current again
+    document.getElementById('tab-takeover-overlay')?.remove();
     state.currentNode = saved.currentNodeId ? (state.map?.nodes?.[saved.currentNodeId] || null) : null;
     delete state.currentNodeId;
     delete state.rngSeed;
@@ -84,16 +136,18 @@ function backupSavedRunForReset() {
 
 (function restoreRunBackupOnPageLoad() {
   try {
+    // Restore ONLY when no current run exists. A leftover backup (reset →
+    // new run started without a reload) must never clobber live progress —
+    // with several tabs open, any tab loading the page used to overwrite the
+    // active run with this stale backup.
     const prev = localStorage.getItem(PREVIOUS_RUN_KEY);
-    if (prev) {
+    if (prev && !localStorage.getItem('poke_current_run')) {
       localStorage.setItem('poke_current_run', prev);
-      localStorage.removeItem(PREVIOUS_RUN_KEY);
+      const prevEndless = localStorage.getItem(PREVIOUS_ENDLESS_KEY);
+      if (prevEndless) localStorage.setItem('poke_endless_state', prevEndless);
     }
-    const prevEndless = localStorage.getItem(PREVIOUS_ENDLESS_KEY);
-    if (prevEndless) {
-      localStorage.setItem('poke_endless_state', prevEndless);
-      localStorage.removeItem(PREVIOUS_ENDLESS_KEY);
-    }
+    localStorage.removeItem(PREVIOUS_RUN_KEY);
+    localStorage.removeItem(PREVIOUS_ENDLESS_KEY);
   } catch {}
 })();
 
@@ -255,7 +309,9 @@ async function startNewRun(nuzlockeMode = false, gen = '1', forcedStarterId = nu
   seedRng(seed);
   const gen2Mode = gen === '2';
   const bothGens = gen === 'all';
-  state = { currentMap: 0, currentNode: null, team: [], items: [], badges: 0, map: null, eliteIndex: 0, trainer: savedTrainer || 'boy', starterSpeciesId: null, maxTeamSize: 1, nuzlockeMode, runGen: gen, gen2Mode, bothGens, silverBeaten: 0, usedPokecenter: false, pickedUpItem: false, runSeed: seed, retryOnWipe: nuzlockeMode ? false : opts.retryOnWipe !== false };
+  _tabStale = false; _forceNextSave = true;
+  document.getElementById('tab-takeover-overlay')?.remove();
+  state = { runId: Date.now() + ':' + Math.floor(Math.random() * 1e9), saveSeq: 0, currentMap: 0, currentNode: null, team: [], items: [], badges: 0, map: null, eliteIndex: 0, trainer: savedTrainer || 'boy', starterSpeciesId: null, maxTeamSize: 1, nuzlockeMode, runGen: gen, gen2Mode, bothGens, silverBeaten: 0, usedPokecenter: false, pickedUpItem: false, runSeed: seed, retryOnWipe: nuzlockeMode ? false : opts.retryOnWipe !== false };
   if (gen === '3') {
     // Which villain team ambushes this run (rival-slot encounters).
     state.villainTeam = gen === '4' ? 'galactic'
@@ -3291,7 +3347,10 @@ async function startEndlessRun(stageNum = 1, forcedStarterId = null, forcedStart
   const seed = (Date.now() ^ (Math.random() * 0x100000000 | 0)) >>> 0;
   seedRng(seed);
   const savedTrainer = localStorage.getItem('poke_trainer') || 'boy';
+  _tabStale = false; _forceNextSave = true;
+  document.getElementById('tab-takeover-overlay')?.remove();
   state = {
+    runId: Date.now() + ':' + Math.floor(Math.random() * 1e9), saveSeq: 0,
     currentMap: 0, currentNode: null, team: [], items: [], badges: 0,
     map: null, eliteIndex: 0, trainer: savedTrainer, starterSpeciesId: null,
     maxTeamSize: 1, nuzlockeMode: false, usedPokecenter: false, pickedUpItem: false,
