@@ -4799,6 +4799,8 @@ async function openHallOfFameModal() {
     if (filter === 'tower')    return !!e.endless;
     if (filter === 'gen2')     return !e.endless && entryGen(e) === '2';
     if (filter === 'gen3')     return !e.endless && entryGen(e) === '3';
+    if (filter === 'gen4')     return !e.endless && entryGen(e) === '4';
+    if (filter === 'gen5')     return !e.endless && entryGen(e) === '5';
     return true;
   }
 
@@ -4835,7 +4837,7 @@ async function openHallOfFameModal() {
     return `
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <span style="font-size:10px;color:gold;font-weight:bold;">${e.endless ? `Battle Tower: ${getStageName(e.stageNumber)}` : `Championship #${e.runNumber}`}${e.hardMode ? ' ☠️' : ''}${entryGen(e) === '3' ? ' ⅠⅠⅠ' : entryGen(e) === 'all' ? ' Tot' : entryGen(e) === '2' ? ' ⅠⅠ' : ''}</span>
+          <span style="font-size:10px;color:gold;font-weight:bold;">${e.endless ? `Battle Tower: ${getStageName(e.stageNumber)}` : `Championship #${e.runNumber}`}${e.hardMode ? ' ☠️' : ''}${entryGen(e) === '5' ? ' Ⅴ' : entryGen(e) === '4' ? ' ⅠⅤ' : entryGen(e) === '3' ? ' ⅠⅠⅠ' : entryGen(e) === 'all' ? ' Tot' : entryGen(e) === '2' ? ' ⅠⅠ' : ''}</span>
           <span style="font-size:9px;color:var(--text-dim);">${e.date}</span>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">${pokemonHtml}</div>
@@ -4844,8 +4846,8 @@ async function openHallOfFameModal() {
 
   const filterChipsHtml = entries.length > 0 ? `
     <div id="hof-filter-bar" style="display:flex;gap:4px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--border);">
-      ${['all','normal','nuzlocke','tower','gen2','gen3'].map(f =>
-        `<button class="hof-filter-chip${f === 'all' ? ' active' : ''}" data-filter="${f}" style="font-family:'Press Start 2P',monospace;font-size:7px;padding:4px 6px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-dim);cursor:pointer;border-radius:4px;">${f === 'all' ? 'All' : f === 'normal' ? 'Normal' : f === 'nuzlocke' ? 'Nuzlocke' : f === 'tower' ? 'Battle Tower' : f === 'gen3' ? 'Gen 3' : 'Gen 2'}</button>`
+      ${['all','normal','nuzlocke','tower','gen2','gen3','gen4','gen5'].map(f =>
+        `<button class="hof-filter-chip${f === 'all' ? ' active' : ''}" data-filter="${f}" style="font-family:'Press Start 2P',monospace;font-size:7px;padding:4px 6px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-dim);cursor:pointer;border-radius:4px;">${f === 'all' ? 'All' : f === 'normal' ? 'Normal' : f === 'nuzlocke' ? 'Nuzlocke' : f === 'tower' ? 'Battle Tower' : f === 'gen5' ? 'Gen 5' : f === 'gen4' ? 'Gen 4' : f === 'gen3' ? 'Gen 3' : 'Gen 2'}</button>`
       ).join('')}
     </div>` : '';
 

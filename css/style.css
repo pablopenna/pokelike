@@ -256,6 +256,23 @@ h1, h2, .pixel-font {
   border-top: 2px solid var(--gba-frame);
 }
 .region-card-plate b { font-weight: normal; font-size: 6px; color: var(--gba-ink-dim); }
+
+/* Locked regions (Sinnoh/Unova until the previous gen is beaten) */
+.region-card-lock { display: none; }
+.gen-btn--locked .region-card-lock {
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 18px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+  z-index: 2;
+  pointer-events: none;
+}
+.gen-btn--locked { position: relative; }
+.gen-btn--locked .region-card-art { filter: grayscale(1) brightness(0.45); }
+.gen-btn--locked .region-card-plate { opacity: 0.55; }
 @media (hover: hover) {
   .region-card:hover { transform: translateY(-2px); }
   .region-card:hover .region-card-art { filter: saturate(0.8) brightness(0.9); }

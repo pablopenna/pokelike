@@ -27,6 +27,14 @@ const POKELIKE_RULES = {
       "Gen III (Hoenn) — Pokémon #252-386 catchable. 8 Hoenn Gym Leaders (Roxanne through Wallace), " +
       "then the Hoenn Elite Four + Champion Steven. Team Aqua or Team Magma (rolled per run) ambushes " +
       "you at the rival slots on maps 2/4/6/8, ending with Archie/Maxie.",
+    "4":
+      "Gen IV (Sinnoh) — Pokémon #387-493 catchable. Unlocked by winning the Hoenn campaign. " +
+      "8 Sinnoh Gym Leaders (Roark through Volkner), then the Sinnoh Elite Four + Champion Cynthia. " +
+      "Team Galactic ambushes you at the rival slots on maps 2/4/6/8, ending with Boss Cyrus.",
+    "5":
+      "Gen V (Unova) — Pokémon #494-649 catchable. Unlocked by winning the Sinnoh campaign. " +
+      "8 Unova Gym Leaders (Cilan through Drayden), then the Unova Elite Four + Champion Alder. " +
+      "Team Plasma ambushes you at the rival slots on maps 2/4/6/8 (N twice), ending with Ghetsis.",
     both:
       "Tot (all gens) — Pokémon #1-386 catchable. Each map's Gym is RANDOM among that slot's Gen I, " +
       "Gen II and Gen III leader. The final league is 4 random Elite Four members + 1 random Champion. " +
@@ -112,7 +120,7 @@ const POKELIKE_RULES = {
       "Selectors for driving the game programmatically. Buttons are clicked with .click(); read state " +
       "from the DOM. The current screen is the visible element with class 'screen'.",
     title_screen: {
-      generation_toggle: '#gen-toggle .gen-btn[data-gen="1" | "2" | "3" | "both"]  (click to select generation; "both" = Tot, all gens)',
+      generation_toggle: '#gen-toggle .gen-btn[data-gen="1" | "2" | "3" | "4" | "5" | "both"]  (click to select generation; "both" = Tot = gens 1-3 mixed; "4"/"5" are locked until the previous gen is beaten)',
       new_run:
         "#btn-new-run  (New Adventure — opens the professor dialog; pick NORMAL/NUZLOCKE via " +
         ".gba-choice buttons, then the wipe rule for Normal; click the overlay to advance text)",
@@ -174,7 +182,9 @@ const _GUIDE_SECTIONS = [
     the Elite Four + Champion. Lose your whole team and the run is over.</p>
     <ul>
       <li><b>Region cards</b> on the title screen pick your generation: <b>Kanto (I)</b> #1–151,
-      <b>Johto (II)</b> #152–251, <b>Hoenn (III)</b> #252–386, or <b>Tot</b> — all three mixed:
+      <b>Johto (II)</b> #152–251, <b>Hoenn (III)</b> #252–386, <b>Sinnoh (IV)</b> #387–493
+      (unlocked by winning Hoenn), <b>Unova (V)</b> #494–649 (unlocked by winning Sinnoh),
+      or <b>Tot</b> — the first three mixed:
       every map's gym is rolled among the three regions' leaders and the final league mixes all gens.</li>
       <li>Press <b>New Adventure</b> and the professor asks how you'll travel: <b>NORMAL</b> — the standard
       run — or <b>NUZLOCKE</b> — hardcore, any Pokémon that faints is lost forever (rival battles excepted).</li>
@@ -193,7 +203,8 @@ const _GUIDE_SECTIONS = [
       <li><b>♪ Move Tutor</b> — upgrade a move's power tier (at least 2 per map, guaranteed) ·
       <b>⇄ Trade</b> — swap a Pokémon for one 3 levels higher</li>
       <li><b>⚝ Legendary</b> — beat it to recruit it (maps 6+)</li>
-      <li><b>Rival</b> — Silver in Johto, Team Aqua/Magma in Hoenn (maps 2/4/6/8): double XP for the whole
+      <li><b>Rival</b> — Silver in Johto, Team Aqua/Magma in Hoenn, Team Galactic in Sinnoh,
+      Team Plasma in Unova (maps 2/4/6/8): double XP for the whole
       team, full heal after, and Nuzlocke-exempt.</li>
     </ul>
     <p>A per-map <b>level cap</b> equal to the leader's ace keeps you from out-leveling the challenge.</p>` },

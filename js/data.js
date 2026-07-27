@@ -1315,7 +1315,7 @@ async function getCatchChoices(mapIndex, count = 3, maxGenId = 151, excludeStart
   const widenMode = isEndless ? 'endless' : ((isGen2 || isGen3) ? 'gen2' : 'none');
   const bucket = getBstBucket(range.min, widenMode);
 
-  const starterIds = excludeStarters ? (minGenId >= 252 ? GEN3_STARTER_IDS : minGenId >= 152 ? GEN2_STARTER_IDS : STARTER_IDS) : [];
+  const starterIds = excludeStarters ? (minGenId >= 494 ? GEN5_STARTER_IDS : minGenId >= 387 ? GEN4_STARTER_IDS : minGenId >= 252 ? GEN3_STARTER_IDS : minGenId >= 152 ? GEN2_STARTER_IDS : STARTER_IDS) : [];
   const starterSet = new Set(starterIds);
   const larvitarLine = new Set([246, 247, 248]);
   // Gen 3's pseudo-legendary bases (Bagon/Beldum lines) get the same early-map
@@ -1406,6 +1406,291 @@ const STARTER_IDS = [1, 4, 7];
 const GEN2_STARTER_IDS = [152, 155, 158];
 const GEN3_STARTER_IDS = [252, 255, 258];
 
+const SINNOH_GYM_LEADERS = [
+  { name: 'Roark', badge: 'Coal Badge', type: 'Rock', moveTier: 0,
+    team: [
+      { speciesId: 74, name: 'Geodude', types: ['Rock','Ground'], baseStats: { hp:40, atk:80, def:100, speed:20, special:30, spdef:30 }, level: 8 },
+      { speciesId: 408, name: 'Cranidos', types: ['Rock'], baseStats: { hp:67, atk:125, def:40, speed:58, special:30, spdef:30 }, level: 10, heldItem: { id: 'hard_stone', name: 'Hard Stone', icon: '🪨' } },
+    ]
+  },
+  { name: 'Gardenia', badge: 'Forest Badge', type: 'Grass', moveTier: 0,
+    team: [
+      { speciesId: 420, name: 'Cherubi', types: ['Grass'], baseStats: { hp:45, atk:35, def:45, speed:35, special:62, spdef:53 }, level: 18 },
+      { speciesId: 406, name: 'Budew', types: ['Grass','Poison'], baseStats: { hp:40, atk:30, def:35, speed:55, special:50, spdef:70 }, level: 18 },
+      { speciesId: 407, name: 'Roserade', types: ['Grass','Poison'], baseStats: { hp:60, atk:70, def:65, speed:90, special:125, spdef:105 }, level: 20, heldItem: { id: 'miracle_seed', name: 'Miracle Seed', icon: '🌱' } },
+    ]
+  },
+  { name: 'Maylene', badge: 'Cobble Badge', type: 'Fighting', moveTier: 0,
+    team: [
+      { speciesId: 307, name: 'Meditite', types: ['Fighting','Psychic'], baseStats: { hp:30, atk:40, def:55, speed:60, special:40, spdef:55 }, level: 27 },
+      { speciesId: 67, name: 'Machoke', types: ['Fighting'], baseStats: { hp:80, atk:100, def:70, speed:45, special:50, spdef:60 }, level: 28 },
+      { speciesId: 448, name: 'Lucario', types: ['Fighting','Steel'], baseStats: { hp:70, atk:110, def:70, speed:90, special:115, spdef:70 }, level: 30, heldItem: { id: 'black_belt', name: 'Black Belt', icon: '🥋' } },
+    ]
+  },
+  { name: 'Crasher Wake', badge: 'Fen Badge', type: 'Water', moveTier: 1,
+    team: [
+      { speciesId: 130, name: 'Gyarados', types: ['Water','Flying'], baseStats: { hp:95, atk:125, def:79, speed:81, special:60, spdef:100 }, level: 37 },
+      { speciesId: 195, name: 'Quagsire', types: ['Water','Ground'], baseStats: { hp:95, atk:85, def:85, speed:35, special:65, spdef:65 }, level: 38 },
+      { speciesId: 419, name: 'Floatzel', types: ['Water'], baseStats: { hp:85, atk:105, def:55, speed:115, special:85, spdef:50 }, level: 40, heldItem: { id: 'mystic_water', name: 'Mystic Water', icon: '💧' } },
+    ]
+  },
+  { name: 'Fantina', badge: 'Relic Badge', type: 'Ghost', moveTier: 1,
+    team: [
+      { speciesId: 426, name: 'Drifblim', types: ['Ghost','Flying'], baseStats: { hp:150, atk:80, def:44, speed:80, special:90, spdef:54 }, level: 47 },
+      { speciesId: 94, name: 'Gengar', types: ['Ghost','Poison'], baseStats: { hp:60, atk:65, def:60, speed:110, special:130, spdef:75 }, level: 48 },
+      { speciesId: 429, name: 'Mismagius', types: ['Ghost'], baseStats: { hp:60, atk:60, def:60, speed:105, special:105, spdef:105 }, level: 50, heldItem: { id: 'spell_tag', name: 'Spell Tag', icon: '🏷️' } },
+    ]
+  },
+  { name: 'Byron', badge: 'Mine Badge', type: 'Steel', moveTier: 1,
+    team: [
+      { speciesId: 82, name: 'Magneton', types: ['Electric','Steel'], baseStats: { hp:50, atk:60, def:95, speed:70, special:120, spdef:70 }, level: 57 },
+      { speciesId: 208, name: 'Steelix', types: ['Steel','Ground'], baseStats: { hp:75, atk:85, def:200, speed:30, special:55, spdef:65 }, level: 58 },
+      { speciesId: 411, name: 'Bastiodon', types: ['Rock','Steel'], baseStats: { hp:60, atk:52, def:168, speed:30, special:47, spdef:138 }, level: 60, heldItem: { id: 'metal_coat', name: 'Metal Coat', icon: '🥈' } },
+    ]
+  },
+  { name: 'Candice', badge: 'Icicle Badge', type: 'Ice', moveTier: 2,
+    team: [
+      { speciesId: 215, name: 'Sneasel', types: ['Dark','Ice'], baseStats: { hp:55, atk:95, def:55, speed:115, special:35, spdef:75 }, level: 67 },
+      { speciesId: 221, name: 'Piloswine', types: ['Ice','Ground'], baseStats: { hp:100, atk:100, def:80, speed:50, special:60, spdef:60 }, level: 67 },
+      { speciesId: 460, name: 'Abomasnow', types: ['Grass','Ice'], baseStats: { hp:90, atk:92, def:75, speed:60, special:92, spdef:85 }, level: 68 },
+      { speciesId: 478, name: 'Froslass', types: ['Ice','Ghost'], baseStats: { hp:70, atk:80, def:70, speed:110, special:80, spdef:70 }, level: 70, heldItem: { id: 'focus_sash', name: 'Focus Sash', icon: '🎗️' } },
+    ]
+  },
+  { name: 'Volkner', badge: 'Beacon Badge', type: 'Electric', moveTier: 2,
+    team: [
+      { speciesId: 135, name: 'Jolteon', types: ['Electric'], baseStats: { hp:65, atk:65, def:60, speed:130, special:110, spdef:95 }, level: 76 },
+      { speciesId: 26, name: 'Raichu', types: ['Electric'], baseStats: { hp:60, atk:90, def:55, speed:110, special:90, spdef:80 }, level: 77 },
+      { speciesId: 405, name: 'Luxray', types: ['Electric'], baseStats: { hp:80, atk:120, def:79, speed:70, special:95, spdef:79 }, level: 78 },
+      { speciesId: 466, name: 'Electivire', types: ['Electric'], baseStats: { hp:75, atk:123, def:67, speed:95, special:95, spdef:85 }, level: 80, heldItem: { id: 'magnet', name: 'Magnet', icon: '🧲' } },
+    ]
+  },
+];
+
+const GEN4_ELITE_4 = [
+  { name: 'Aaron', title: 'Elite Four', type: 'Bug',
+    team: [
+      { speciesId: 469, name: 'Yanmega', types: ['Bug','Flying'], baseStats: { hp:86, atk:76, def:86, speed:95, special:116, spdef:56 }, level: 76, heldItem: { id: 'sharp_beak', name: 'Sharp Beak', icon: '🦅' } },
+      { speciesId: 212, name: 'Scizor', types: ['Bug','Steel'], baseStats: { hp:70, atk:130, def:100, speed:65, special:55, spdef:80 }, level: 76, heldItem: { id: 'metal_coat', name: 'Metal Coat', icon: '🥈' } },
+      { speciesId: 416, name: 'Vespiquen', types: ['Bug','Flying'], baseStats: { hp:70, atk:80, def:102, speed:40, special:80, spdef:102 }, level: 78 },
+      { speciesId: 214, name: 'Heracross', types: ['Bug','Fighting'], baseStats: { hp:80, atk:125, def:75, speed:85, special:40, spdef:95 }, level: 78, heldItem: { id: 'expert_belt', name: 'Expert Belt', icon: '🥊' } },
+      { speciesId: 452, name: 'Drapion', types: ['Poison','Dark'], baseStats: { hp:70, atk:90, def:110, speed:95, special:60, spdef:75 }, level: 80, heldItem: { id: 'scope_lens', name: 'Scope Lens', icon: '🔭' } },
+    ]
+  },
+  { name: 'Bertha', title: 'Elite Four', type: 'Ground',
+    team: [
+      { speciesId: 340, name: 'Whiscash', types: ['Water','Ground'], baseStats: { hp:110, atk:78, def:73, speed:60, special:76, spdef:71 }, level: 79 },
+      { speciesId: 472, name: 'Gliscor', types: ['Ground','Flying'], baseStats: { hp:75, atk:95, def:125, speed:95, special:45, spdef:75 }, level: 80, heldItem: { id: 'sharp_beak', name: 'Sharp Beak', icon: '🦅' } },
+      { speciesId: 76, name: 'Golem', types: ['Rock','Ground'], baseStats: { hp:80, atk:120, def:130, speed:45, special:55, spdef:65 }, level: 81, heldItem: { id: 'hard_stone', name: 'Hard Stone', icon: '🪨' } },
+      { speciesId: 464, name: 'Rhyperior', types: ['Ground','Rock'], baseStats: { hp:115, atk:140, def:130, speed:40, special:55, spdef:55 }, level: 82, heldItem: { id: 'life_orb', name: 'Life Orb', icon: '🔮' } },
+      { speciesId: 450, name: 'Hippowdon', types: ['Ground'], baseStats: { hp:108, atk:112, def:118, speed:47, special:68, spdef:72 }, level: 84, heldItem: { id: 'soft_sand', name: 'Soft Sand', icon: '🏖️' } },
+    ]
+  },
+  { name: 'Flint', title: 'Elite Four', type: 'Fire',
+    team: [
+      { speciesId: 136, name: 'Flareon', types: ['Fire'], baseStats: { hp:65, atk:130, def:60, speed:65, special:95, spdef:110 }, level: 82, heldItem: { id: 'charcoal', name: 'Charcoal', icon: '🔥' } },
+      { speciesId: 78, name: 'Rapidash', types: ['Fire'], baseStats: { hp:65, atk:100, def:70, speed:105, special:80, spdef:80 }, level: 83 },
+      { speciesId: 229, name: 'Houndoom', types: ['Dark','Fire'], baseStats: { hp:75, atk:90, def:50, speed:95, special:110, spdef:80 }, level: 84, heldItem: { id: 'black_glasses', name: 'Black Glasses', icon: '🕶️' } },
+      { speciesId: 467, name: 'Magmortar', types: ['Fire'], baseStats: { hp:75, atk:95, def:67, speed:83, special:125, spdef:95 }, level: 86, heldItem: { id: 'life_orb', name: 'Life Orb', icon: '🔮' } },
+    ]
+  },
+  { name: 'Lucian', title: 'Elite Four', type: 'Psychic',
+    team: [
+      { speciesId: 122, name: 'Mr-mime', types: ['Psychic','Fairy'], baseStats: { hp:40, atk:45, def:65, speed:90, special:100, spdef:120 }, level: 84 },
+      { speciesId: 196, name: 'Espeon', types: ['Psychic'], baseStats: { hp:65, atk:65, def:60, speed:110, special:130, spdef:95 }, level: 85, heldItem: { id: 'leftovers', name: 'Leftovers', icon: '🍃' } },
+      { speciesId: 437, name: 'Bronzong', types: ['Steel','Psychic'], baseStats: { hp:67, atk:89, def:116, speed:33, special:79, spdef:116 }, level: 86, heldItem: { id: 'metal_coat', name: 'Metal Coat', icon: '🥈' } },
+      { speciesId: 65, name: 'Alakazam', types: ['Psychic'], baseStats: { hp:55, atk:50, def:45, speed:120, special:135, spdef:95 }, level: 87, heldItem: { id: 'twisted_spoon', name: 'Twisted Spoon', icon: '🥄' } },
+      { speciesId: 475, name: 'Gallade', types: ['Psychic','Fighting'], baseStats: { hp:68, atk:125, def:65, speed:80, special:65, spdef:115 }, level: 88, heldItem: { id: 'expert_belt', name: 'Expert Belt', icon: '🥊' } },
+    ]
+  },
+  { name: 'Cynthia', title: 'Champion', type: 'Mixed',
+    team: [
+      { speciesId: 442, name: 'Spiritomb', types: ['Ghost','Dark'], baseStats: { hp:50, atk:92, def:108, speed:35, special:92, spdef:108 }, level: 86, heldItem: { id: 'spell_tag', name: 'Spell Tag', icon: '🏷️' } },
+      { speciesId: 407, name: 'Roserade', types: ['Grass','Poison'], baseStats: { hp:60, atk:70, def:65, speed:90, special:125, spdef:105 }, level: 86, heldItem: { id: 'miracle_seed', name: 'Miracle Seed', icon: '🌱' } },
+      { speciesId: 468, name: 'Togekiss', types: ['Fairy','Flying'], baseStats: { hp:85, atk:50, def:95, speed:80, special:120, spdef:115 }, level: 87, heldItem: { id: 'leftovers', name: 'Leftovers', icon: '🍃' } },
+      { speciesId: 448, name: 'Lucario', types: ['Fighting','Steel'], baseStats: { hp:70, atk:110, def:70, speed:90, special:115, spdef:70 }, level: 87, heldItem: { id: 'black_belt', name: 'Black Belt', icon: '🥋' } },
+      { speciesId: 350, name: 'Milotic', types: ['Water'], baseStats: { hp:95, atk:60, def:79, speed:81, special:100, spdef:125 }, level: 88, heldItem: { id: 'mystic_water', name: 'Mystic Water', icon: '💧' } },
+      { speciesId: 445, name: 'Garchomp', types: ['Dragon','Ground'], baseStats: { hp:108, atk:130, def:95, speed:102, special:80, spdef:85 }, level: 90, heldItem: { id: 'dragon_fang', name: 'Dragon Fang', icon: '🐉' } },
+    ]
+  },
+];
+
+// Team Galactic rival encounters (maps 2/4/6/8) — grunt → Mars → Jupiter → Cyrus.
+const GALACTIC_ENCOUNTERS = [
+    { leader: 'Galactic Grunt', team: [
+        { speciesId: 434, name: 'Stunky', types: ['Poison','Dark'], baseStats: { hp:63, atk:63, def:47, speed:74, special:41, spdef:41 }, level: 15 },
+        { speciesId: 41, name: 'Zubat', types: ['Poison','Flying'], baseStats: { hp:40, atk:45, def:35, speed:55, special:30, spdef:40 }, level: 16 },
+        { speciesId: 431, name: 'Glameow', types: ['Normal'], baseStats: { hp:49, atk:55, def:42, speed:85, special:42, spdef:37 }, level: 18 },
+    ]},
+    { leader: 'Galactic Mars', team: [
+        { speciesId: 42, name: 'Golbat', types: ['Poison','Flying'], baseStats: { hp:75, atk:80, def:70, speed:90, special:65, spdef:75 }, level: 35 },
+        { speciesId: 436, name: 'Bronzor', types: ['Steel','Psychic'], baseStats: { hp:57, atk:24, def:86, speed:23, special:24, spdef:86 }, level: 35 },
+        { speciesId: 432, name: 'Purugly', types: ['Normal'], baseStats: { hp:71, atk:82, def:64, speed:112, special:64, spdef:59 }, level: 38 },
+    ]},
+    { leader: 'Galactic Jupiter', team: [
+        { speciesId: 42, name: 'Golbat', types: ['Poison','Flying'], baseStats: { hp:75, atk:80, def:70, speed:90, special:65, spdef:75 }, level: 54 },
+        { speciesId: 437, name: 'Bronzong', types: ['Steel','Psychic'], baseStats: { hp:67, atk:89, def:116, speed:33, special:79, spdef:116 }, level: 55 },
+        { speciesId: 432, name: 'Purugly', types: ['Normal'], baseStats: { hp:71, atk:82, def:64, speed:112, special:64, spdef:59 }, level: 56 },
+        { speciesId: 435, name: 'Skuntank', types: ['Poison','Dark'], baseStats: { hp:103, atk:93, def:67, speed:84, special:71, spdef:61 }, level: 58 },
+    ]},
+    { leader: 'Galactic Boss Cyrus', team: [
+        { speciesId: 461, name: 'Weavile', types: ['Dark','Ice'], baseStats: { hp:70, atk:120, def:65, speed:125, special:45, spdef:85 }, level: 75 },
+        { speciesId: 430, name: 'Honchkrow', types: ['Dark','Flying'], baseStats: { hp:100, atk:125, def:52, speed:71, special:105, spdef:52 }, level: 76 },
+        { speciesId: 169, name: 'Crobat', types: ['Poison','Flying'], baseStats: { hp:85, atk:90, def:80, speed:130, special:70, spdef:80 }, level: 76 },
+        { speciesId: 130, name: 'Gyarados', types: ['Water','Flying'], baseStats: { hp:95, atk:125, def:79, speed:81, special:60, spdef:100 }, level: 77 },
+        { speciesId: 229, name: 'Houndoom', types: ['Dark','Fire'], baseStats: { hp:75, atk:90, def:50, speed:95, special:110, spdef:80 }, level: 78 },
+    ]},
+];
+
+const UNOVA_GYM_LEADERS = [
+  { name: 'Cilan', badge: 'Trio Badge', type: 'Grass', moveTier: 0,
+    team: [
+      { speciesId: 506, name: 'Lillipup', types: ['Normal'], baseStats: { hp:45, atk:60, def:45, speed:55, special:25, spdef:45 }, level: 8 },
+      { speciesId: 511, name: 'Pansage', types: ['Grass'], baseStats: { hp:50, atk:53, def:48, speed:64, special:53, spdef:48 }, level: 10, heldItem: { id: 'miracle_seed', name: 'Miracle Seed', icon: '🌱' } },
+    ]
+  },
+  { name: 'Lenora', badge: 'Basic Badge', type: 'Normal', moveTier: 0,
+    team: [
+      { speciesId: 507, name: 'Herdier', types: ['Normal'], baseStats: { hp:65, atk:80, def:65, speed:60, special:35, spdef:65 }, level: 18 },
+      { speciesId: 505, name: 'Watchog', types: ['Normal'], baseStats: { hp:60, atk:85, def:69, speed:77, special:60, spdef:69 }, level: 20, heldItem: { id: 'silk_scarf', name: 'Silk Scarf', icon: '🧣' } },
+    ]
+  },
+  { name: 'Burgh', badge: 'Insect Badge', type: 'Bug', moveTier: 0,
+    team: [
+      { speciesId: 545, name: 'Scolipede', types: ['Bug','Poison'], baseStats: { hp:60, atk:100, def:89, speed:112, special:55, spdef:69 }, level: 27 },
+      { speciesId: 557, name: 'Dwebble', types: ['Bug','Rock'], baseStats: { hp:50, atk:65, def:85, speed:55, special:35, spdef:35 }, level: 28 },
+      { speciesId: 542, name: 'Leavanny', types: ['Bug','Grass'], baseStats: { hp:75, atk:103, def:80, speed:92, special:70, spdef:80 }, level: 30, heldItem: { id: 'silver_powder', name: 'Silver Powder', icon: '🐛' } },
+    ]
+  },
+  { name: 'Elesa', badge: 'Bolt Badge', type: 'Electric', moveTier: 1,
+    team: [
+      { speciesId: 587, name: 'Emolga', types: ['Electric','Flying'], baseStats: { hp:55, atk:75, def:60, speed:103, special:75, spdef:60 }, level: 37 },
+      { speciesId: 523, name: 'Zebstrika', types: ['Electric'], baseStats: { hp:75, atk:100, def:63, speed:116, special:80, spdef:63 }, level: 38 },
+      { speciesId: 523, name: 'Zebstrika', types: ['Electric'], baseStats: { hp:75, atk:100, def:63, speed:116, special:80, spdef:63 }, level: 40, heldItem: { id: 'magnet', name: 'Magnet', icon: '🧲' } },
+    ]
+  },
+  { name: 'Clay', badge: 'Quake Badge', type: 'Ground', moveTier: 1,
+    team: [
+      { speciesId: 552, name: 'Krokorok', types: ['Ground','Dark'], baseStats: { hp:60, atk:82, def:45, speed:74, special:45, spdef:45 }, level: 47 },
+      { speciesId: 536, name: 'Palpitoad', types: ['Water','Ground'], baseStats: { hp:75, atk:65, def:55, speed:69, special:65, spdef:55 }, level: 47 },
+      { speciesId: 530, name: 'Excadrill', types: ['Ground','Steel'], baseStats: { hp:110, atk:135, def:60, speed:88, special:50, spdef:65 }, level: 50, heldItem: { id: 'soft_sand', name: 'Soft Sand', icon: '🏖️' } },
+    ]
+  },
+  { name: 'Skyla', badge: 'Jet Badge', type: 'Flying', moveTier: 1,
+    team: [
+      { speciesId: 528, name: 'Swoobat', types: ['Psychic','Flying'], baseStats: { hp:67, atk:57, def:55, speed:114, special:77, spdef:55 }, level: 57 },
+      { speciesId: 521, name: 'Unfezant', types: ['Normal','Flying'], baseStats: { hp:80, atk:115, def:80, speed:93, special:65, spdef:55 }, level: 58 },
+      { speciesId: 581, name: 'Swanna', types: ['Water','Flying'], baseStats: { hp:75, atk:87, def:63, speed:98, special:87, spdef:63 }, level: 60, heldItem: { id: 'sharp_beak', name: 'Sharp Beak', icon: '🦅' } },
+    ]
+  },
+  { name: 'Brycen', badge: 'Freeze Badge', type: 'Ice', moveTier: 2,
+    team: [
+      { speciesId: 583, name: 'Vanillish', types: ['Ice'], baseStats: { hp:51, atk:65, def:65, speed:59, special:80, spdef:75 }, level: 67 },
+      { speciesId: 615, name: 'Cryogonal', types: ['Ice'], baseStats: { hp:80, atk:50, def:50, speed:105, special:95, spdef:135 }, level: 68 },
+      { speciesId: 614, name: 'Beartic', types: ['Ice'], baseStats: { hp:95, atk:130, def:80, speed:50, special:70, spdef:80 }, level: 70, heldItem: { id: 'focus_sash', name: 'Focus Sash', icon: '🎗️' } },
+    ]
+  },
+  { name: 'Drayden', badge: 'Legend Badge', type: 'Dragon', moveTier: 2,
+    team: [
+      { speciesId: 611, name: 'Fraxure', types: ['Dragon'], baseStats: { hp:66, atk:117, def:70, speed:67, special:40, spdef:50 }, level: 76 },
+      { speciesId: 621, name: 'Druddigon', types: ['Dragon'], baseStats: { hp:77, atk:120, def:90, speed:48, special:60, spdef:90 }, level: 77 },
+      { speciesId: 612, name: 'Haxorus', types: ['Dragon'], baseStats: { hp:76, atk:147, def:90, speed:97, special:60, spdef:70 }, level: 80, heldItem: { id: 'dragon_fang', name: 'Dragon Fang', icon: '🐉' } },
+    ]
+  },
+];
+
+const GEN5_ELITE_4 = [
+  { name: 'Shauntal', title: 'Elite Four', type: 'Ghost',
+    team: [
+      { speciesId: 563, name: 'Cofagrigus', types: ['Ghost'], baseStats: { hp:58, atk:50, def:145, speed:30, special:95, spdef:105 }, level: 76 },
+      { speciesId: 426, name: 'Drifblim', types: ['Ghost','Flying'], baseStats: { hp:150, atk:80, def:44, speed:80, special:90, spdef:54 }, level: 77 },
+      { speciesId: 623, name: 'Golurk', types: ['Ground','Ghost'], baseStats: { hp:89, atk:124, def:80, speed:55, special:55, spdef:80 }, level: 78, heldItem: { id: 'hard_stone', name: 'Hard Stone', icon: '🪨' } },
+      { speciesId: 593, name: 'Jellicent-male', types: ['Water','Ghost'], baseStats: { hp:100, atk:60, def:70, speed:60, special:85, spdef:105 }, level: 78, heldItem: { id: 'mystic_water', name: 'Mystic Water', icon: '💧' } },
+      { speciesId: 609, name: 'Chandelure', types: ['Ghost','Fire'], baseStats: { hp:60, atk:55, def:90, speed:80, special:145, spdef:90 }, level: 80, heldItem: { id: 'spell_tag', name: 'Spell Tag', icon: '🏷️' } },
+    ]
+  },
+  { name: 'Grimsley', title: 'Elite Four', type: 'Dark',
+    team: [
+      { speciesId: 510, name: 'Liepard', types: ['Dark'], baseStats: { hp:64, atk:88, def:50, speed:106, special:88, spdef:50 }, level: 79 },
+      { speciesId: 560, name: 'Scrafty', types: ['Dark','Fighting'], baseStats: { hp:65, atk:90, def:115, speed:58, special:45, spdef:115 }, level: 80, heldItem: { id: 'expert_belt', name: 'Expert Belt', icon: '🥊' } },
+      { speciesId: 553, name: 'Krookodile', types: ['Ground','Dark'], baseStats: { hp:95, atk:117, def:80, speed:92, special:65, spdef:70 }, level: 81, heldItem: { id: 'life_orb', name: 'Life Orb', icon: '🔮' } },
+      { speciesId: 625, name: 'Bisharp', types: ['Dark','Steel'], baseStats: { hp:65, atk:125, def:100, speed:70, special:60, spdef:70 }, level: 83, heldItem: { id: 'black_glasses', name: 'Black Glasses', icon: '🕶️' } },
+    ]
+  },
+  { name: 'Caitlin', title: 'Elite Four', type: 'Psychic',
+    team: [
+      { speciesId: 518, name: 'Musharna', types: ['Psychic'], baseStats: { hp:116, atk:55, def:85, speed:29, special:107, spdef:95 }, level: 82, heldItem: { id: 'leftovers', name: 'Leftovers', icon: '🍃' } },
+      { speciesId: 561, name: 'Sigilyph', types: ['Psychic','Flying'], baseStats: { hp:72, atk:58, def:80, speed:97, special:103, spdef:80 }, level: 83 },
+      { speciesId: 579, name: 'Reuniclus', types: ['Psychic'], baseStats: { hp:110, atk:65, def:75, speed:30, special:125, spdef:85 }, level: 84, heldItem: { id: 'life_orb', name: 'Life Orb', icon: '🔮' } },
+      { speciesId: 576, name: 'Gothitelle', types: ['Psychic'], baseStats: { hp:70, atk:55, def:95, speed:65, special:95, spdef:110 }, level: 86, heldItem: { id: 'twisted_spoon', name: 'Twisted Spoon', icon: '🥄' } },
+    ]
+  },
+  { name: 'Marshal', title: 'Elite Four', type: 'Fighting',
+    team: [
+      { speciesId: 538, name: 'Throh', types: ['Fighting'], baseStats: { hp:120, atk:100, def:85, speed:45, special:30, spdef:85 }, level: 84 },
+      { speciesId: 539, name: 'Sawk', types: ['Fighting'], baseStats: { hp:75, atk:125, def:75, speed:85, special:30, spdef:75 }, level: 85 },
+      { speciesId: 620, name: 'Mienshao', types: ['Fighting'], baseStats: { hp:65, atk:125, def:60, speed:105, special:95, spdef:60 }, level: 86, heldItem: { id: 'expert_belt', name: 'Expert Belt', icon: '🥊' } },
+      { speciesId: 534, name: 'Conkeldurr', types: ['Fighting'], baseStats: { hp:105, atk:140, def:95, speed:45, special:55, spdef:65 }, level: 88, heldItem: { id: 'black_belt', name: 'Black Belt', icon: '🥋' } },
+    ]
+  },
+  { name: 'Alder', title: 'Champion', type: 'Mixed',
+    team: [
+      { speciesId: 617, name: 'Accelgor', types: ['Bug'], baseStats: { hp:80, atk:70, def:40, speed:145, special:100, spdef:60 }, level: 86, heldItem: { id: 'focus_sash', name: 'Focus Sash', icon: '🎗️' } },
+      { speciesId: 626, name: 'Bouffalant', types: ['Normal'], baseStats: { hp:95, atk:110, def:95, speed:55, special:40, spdef:95 }, level: 86, heldItem: { id: 'silk_scarf', name: 'Silk Scarf', icon: '🧣' } },
+      { speciesId: 621, name: 'Druddigon', types: ['Dragon'], baseStats: { hp:77, atk:120, def:90, speed:48, special:60, spdef:90 }, level: 87, heldItem: { id: 'dragon_fang', name: 'Dragon Fang', icon: '🐉' } },
+      { speciesId: 584, name: 'Vanilluxe', types: ['Ice'], baseStats: { hp:71, atk:95, def:85, speed:79, special:110, spdef:95 }, level: 87 },
+      { speciesId: 589, name: 'Escavalier', types: ['Bug','Steel'], baseStats: { hp:70, atk:135, def:105, speed:20, special:60, spdef:105 }, level: 88, heldItem: { id: 'metal_coat', name: 'Metal Coat', icon: '🥈' } },
+      { speciesId: 637, name: 'Volcarona', types: ['Bug','Fire'], baseStats: { hp:85, atk:60, def:65, speed:100, special:135, spdef:105 }, level: 90, heldItem: { id: 'charcoal', name: 'Charcoal', icon: '🔥' } },
+    ]
+  },
+];
+
+// Team Plasma rival encounters (maps 2/4/6/8) — grunt → N → N → Ghetsis.
+const PLASMA_ENCOUNTERS = [
+    { leader: 'Plasma Grunt', team: [
+        { speciesId: 504, name: 'Patrat', types: ['Normal'], baseStats: { hp:45, atk:55, def:39, speed:42, special:35, spdef:39 }, level: 15 },
+        { speciesId: 509, name: 'Purrloin', types: ['Dark'], baseStats: { hp:41, atk:50, def:37, speed:66, special:50, spdef:37 }, level: 16 },
+        { speciesId: 505, name: 'Watchog', types: ['Normal'], baseStats: { hp:60, atk:85, def:69, speed:77, special:60, spdef:69 }, level: 18 },
+    ]},
+    { leader: 'N', team: [
+        { speciesId: 520, name: 'Tranquill', types: ['Normal','Flying'], baseStats: { hp:62, atk:77, def:62, speed:65, special:50, spdef:42 }, level: 35 },
+        { speciesId: 552, name: 'Krokorok', types: ['Ground','Dark'], baseStats: { hp:60, atk:82, def:45, speed:74, special:45, spdef:45 }, level: 36 },
+        { speciesId: 571, name: 'Zoroark', types: ['Dark'], baseStats: { hp:60, atk:105, def:60, speed:105, special:120, spdef:60 }, level: 38 },
+    ]},
+    { leader: 'N', team: [
+        { speciesId: 565, name: 'Carracosta', types: ['Water','Rock'], baseStats: { hp:74, atk:108, def:133, speed:32, special:83, spdef:65 }, level: 55 },
+        { speciesId: 567, name: 'Archeops', types: ['Rock','Flying'], baseStats: { hp:75, atk:140, def:65, speed:110, special:112, spdef:65 }, level: 56 },
+        { speciesId: 571, name: 'Zoroark', types: ['Dark'], baseStats: { hp:60, atk:105, def:60, speed:105, special:120, spdef:60 }, level: 58 },
+    ]},
+    { leader: 'Plasma Boss Ghetsis', team: [
+        { speciesId: 563, name: 'Cofagrigus', types: ['Ghost'], baseStats: { hp:58, atk:50, def:145, speed:30, special:95, spdef:105 }, level: 75 },
+        { speciesId: 626, name: 'Bouffalant', types: ['Normal'], baseStats: { hp:95, atk:110, def:95, speed:55, special:40, spdef:95 }, level: 76 },
+        { speciesId: 537, name: 'Seismitoad', types: ['Water','Ground'], baseStats: { hp:105, atk:95, def:75, speed:74, special:85, spdef:75 }, level: 76 },
+        { speciesId: 604, name: 'Eelektross', types: ['Electric'], baseStats: { hp:85, atk:115, def:80, speed:50, special:105, spdef:80 }, level: 77 },
+        { speciesId: 635, name: 'Hydreigon', types: ['Dark','Dragon'], baseStats: { hp:92, atk:105, def:90, speed:98, special:125, spdef:90 }, level: 78 },
+    ]},
+];
+
+const GEN4_MAP_LEVEL_RANGES = [
+  [1, 10], [11, 20], [21, 30], [31, 40], [41, 50], [51, 60], [61, 70], [71, 80], [81, 90],
+];
+const GEN5_MAP_LEVEL_RANGES = GEN4_MAP_LEVEL_RANGES;
+
+const GEN4_MAP_BST_RANGES = GEN3_MAP_BST_RANGES;
+const GEN5_MAP_BST_RANGES = GEN3_MAP_BST_RANGES;
+
+const MAP_NAMES_SINNOH = [
+  'Oreburgh Mine', 'Eterna Forest', 'Veilstone City', 'Pastoria Marsh',
+  'Hearthome City', 'Canalave City', 'Snowpoint Temple', 'Sunyshore City', 'Pokémon League',
+];
+const MAP_NAMES_UNOVA = [
+  'Dreamyard', 'Pinwheel Forest', 'Castelia City', 'Nimbasa City',
+  'Driftveil City', 'Mistralton City', 'Icirrus City', 'Opelucid City', 'Pokémon League',
+];
+
+const GEN4_STARTER_IDS = [387, 390, 393];
+const GEN5_STARTER_IDS = [495, 498, 501];
+
+
 // Per-generation campaign config, keyed by runGen ('1'|'2'|'3'|'all').
 // Tables are thunks so definition order in this file doesn't matter.
 // 'all' resolves gyms/elite per-map via state.gymGens / state.eliteLineup and
@@ -1429,6 +1714,18 @@ const GEN_RUN_CONFIG = {
          levels: () => GEN3_MAP_LEVEL_RANGES, badgeOffset: 16,
          mapBg: i => `ui/mapsGen3/${i + 1}.png`,
          eliteTitle: 'Elite Four & Steven' },
+  '4': { starters: GEN4_STARTER_IDS,
+         catch: { minGenId: 387, maxGenId: 493 },
+         leaders: () => SINNOH_GYM_LEADERS, elite: () => GEN4_ELITE_4,
+         levels: () => GEN4_MAP_LEVEL_RANGES, badgeOffset: 24,
+         mapBg: i => `ui/mapsGen3/${i + 1}.png`,
+         eliteTitle: 'Elite Four & Cynthia' },
+  '5': { starters: GEN5_STARTER_IDS,
+         catch: { minGenId: 494, maxGenId: 649 },
+         leaders: () => UNOVA_GYM_LEADERS, elite: () => GEN5_ELITE_4,
+         levels: () => GEN5_MAP_LEVEL_RANGES, badgeOffset: 32,
+         mapBg: i => `ui/mapsGen2/${i + 1}.png`,
+         eliteTitle: 'Elite Four & Alder' },
   'all': { starters: [...STARTER_IDS, ...GEN2_STARTER_IDS, ...GEN3_STARTER_IDS],
          catch: { minGenId: 1, maxGenId: 386 },
          leaders: () => GYM_LEADERS, elite: () => ELITE_4,
@@ -1443,7 +1740,7 @@ function getSpeciesIdsByType(type, maxGenId = 151) {
   const t = (type || '').toLowerCase();
   const ids = [];
   for (let id = 1; id <= maxGenId; id++) {
-    if (LEGENDARY_ID_SET.has(id) || STARTER_IDS.includes(id) || GEN2_STARTER_IDS.includes(id) || GEN3_STARTER_IDS.includes(id)) continue;
+    if (LEGENDARY_ID_SET.has(id) || STARTER_IDS.includes(id) || GEN2_STARTER_IDS.includes(id) || GEN3_STARTER_IDS.includes(id) || GEN4_STARTER_IDS.includes(id) || GEN5_STARTER_IDS.includes(id)) continue;
     const types = getSpeciesTypes(id);
     if (types && types.some(x => x.toLowerCase() === t)) ids.push(id);
   }

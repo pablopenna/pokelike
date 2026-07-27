@@ -97,6 +97,12 @@ function backupSavedRunForReset() {
   } catch {}
 })();
 
+// A generation counts as beaten when any Hall of Fame entry records a win in
+// it (legacy entries without a gen field are Gen 1 wins).
+function isGenBeaten(gen) {
+  return getHallOfFame().some(e => (e.gen || (e.gen2Mode ? '2' : '1')) === gen);
+}
+
 // ---- Initialization ----
 
 async function initGame() {
@@ -110,15 +116,28 @@ async function initGame() {
   // and persists across reloads via localStorage. The stored 'both' value
   // means "Tot" (all generations combined) and maps to runGen 'all'.
   const _savedGen = localStorage.getItem('poke_selected_gen');
-  let selectedGen = (_savedGen === '2' || _savedGen === '3' || _savedGen === 'both') ? _savedGen : '1'; // '1' | '2' | '3' | 'both'
+  let selectedGen = (['2', '3', '4', '5', 'both'].includes(_savedGen)) ? _savedGen : '1'; // '1'..'5' | 'both'
+  // Gens 4/5 unlock in sequence: win Hoenn to open Sinnoh, win Sinnoh to open Unova.
+  if ((selectedGen === '4' && !isGenBeaten('3')) || (selectedGen === '5' && !isGenBeaten('4'))) selectedGen = '1';
   const syncGenButtons = () => {
-    document.querySelectorAll('#gen-toggle .gen-btn').forEach(b =>
-      b.classList.toggle('gen-btn--active', String(b.dataset.gen) === selectedGen));
+    document.querySelectorAll('#gen-toggle .gen-btn').forEach(b => {
+      b.classList.toggle('gen-btn--active', String(b.dataset.gen) === selectedGen);
+      const g = String(b.dataset.gen);
+      const locked = (g === '4' && !isGenBeaten('3')) || (g === '5' && !isGenBeaten('4'));
+      b.classList.toggle('gen-btn--locked', locked);
+      b.title = locked ? (g === '4' ? 'Win the Hoenn campaign to unlock Sinnoh' : 'Win the Sinnoh campaign to unlock Unova') : '';
+    });
   };
   syncGenButtons();
   document.querySelectorAll('#gen-toggle .gen-btn').forEach(btn => {
     btn.onclick = () => {
-      selectedGen = String(btn.dataset.gen || '1');
+      const g = String(btn.dataset.gen || '1');
+      if ((g === '4' && !isGenBeaten('3')) || (g === '5' && !isGenBeaten('4'))) {
+        showAchievementToast({ icon: '🔒', name: g === '4' ? 'Sinnoh is locked' : 'Unova is locked',
+          desc: g === '4' ? 'Win the Hoenn (Gen III) campaign first!' : 'Win the Sinnoh (Gen IV) campaign first!' });
+        return;
+      }
+      selectedGen = g;
       localStorage.setItem('poke_selected_gen', selectedGen);
       syncGenButtons();
     };
@@ -191,8 +210,9 @@ async function initGame() {
 // dialogs instead of separate title buttons. Normal runs also pick what a
 // full-team wipe means: retry the area (the long-standing default) or a true
 // blackout that ends the run.
-const REGION_NAMES = { '1': 'KANTO', '2': 'JOHTO', '3': 'HOENN', 'all': 'KANTO, JOHTO and HOENN' };
+const REGION_NAMES = { '1': 'KANTO', '2': 'JOHTO', '3': 'HOENN', '4': 'SINNOH', '5': 'UNOVA', 'all': 'KANTO, JOHTO and HOENN' };
 async function startAdventureFlow(gen) {
+  if ((gen === '4' && !isGenBeaten('3')) || (gen === '5' && !isGenBeaten('4'))) gen = '1';
   const region = REGION_NAMES[gen] || 'KANTO';
   const mode = await showGbaDialog({
     lines: [
@@ -238,7 +258,9 @@ async function startNewRun(nuzlockeMode = false, gen = '1', forcedStarterId = nu
   state = { currentMap: 0, currentNode: null, team: [], items: [], badges: 0, map: null, eliteIndex: 0, trainer: savedTrainer || 'boy', starterSpeciesId: null, maxTeamSize: 1, nuzlockeMode, runGen: gen, gen2Mode, bothGens, silverBeaten: 0, usedPokecenter: false, pickedUpItem: false, runSeed: seed, retryOnWipe: nuzlockeMode ? false : opts.retryOnWipe !== false };
   if (gen === '3') {
     // Which villain team ambushes this run (rival-slot encounters).
-    state.villainTeam = rng() < 0.5 ? 'aqua' : 'magma';
+    state.villainTeam = gen === '4' ? 'galactic'
+      : gen === '5' ? 'plasma'
+      : rng() < 0.5 ? 'aqua' : 'magma';
   }
   // Mega Evolution: every unlocked Mega Stone starts in the bag (key items —
   // they re-materialize each run from the account collection).
@@ -890,16 +912,13 @@ function getLevelForNode(node) {
   // farming stroll), while early maps stay inside their band: the player
   // enters at the PREVIOUS cap, and a cap−1 ceiling there (e.g. routes at 22
   // on map 2 while the player arrives at 10) made mid-map attrition lethal.
-  const _runGenPre = getRunGen();
-  const _bandMax = (_runGenPre === '3' ? GEN3_MAP_LEVEL_RANGES
-    : _runGenPre === '2' ? GEN2_MAP_LEVEL_RANGES
-    : MAP_LEVEL_RANGES)[state.currentMap][1];
+  const _bandMax = GEN_RUN_CONFIG[state.bothGens ? '1' : getRunGen()].levels()[state.currentMap][1];
   const _ceil = Math.max(1, _bandMax - 1, getLevelCapForMap() - 4);
   // Gen 2/3: deterministic per-layer curve — fixed offsets scaled onto the
   // mapMin..cap−1 span. Boss layer 8 uses leader data, not this function.
   const _runGen = getRunGen();
-  if (_runGen === '2' || _runGen === '3') {
-    const [minL] = (_runGen === '3' ? GEN3_MAP_LEVEL_RANGES : GEN2_MAP_LEVEL_RANGES)[state.currentMap];
+  if (_runGen !== '1' && _runGen !== 'all') {
+    const [minL] = GEN_RUN_CONFIG[_runGen].levels()[state.currentMap];
     const span = Math.max(0, _ceil - minL);
     if (node.layer >= GEN2_LAYER_OFFSETS.length + 1) return _ceil;
     const layerIdx = Math.min(GEN2_LAYER_OFFSETS.length, Math.max(1, node.layer)) - 1;
@@ -1001,7 +1020,7 @@ async function runGymBattle(node, leader, maxGenId, aceTarget) {
 }
 
 // Highest species id a gym/elite's filler may use, per rolled gen.
-const GEN_MAX_SPECIES_ID = { 1: 151, 2: 251, 3: 386 };
+const GEN_MAX_SPECIES_ID = { 1: 151, 2: 251, 3: 386, 4: 493, 5: 649 };
 
 async function doBossNode(node) {
   // Tot: gym is a random Gen 1/2/3 leader for this slot; levels normalised.
@@ -1013,6 +1032,13 @@ async function doBossNode(node) {
     return;
   }
   const runGen = getRunGen();
+  if (runGen === '4' || runGen === '5') {
+    const cfg = GEN_RUN_CONFIG[runGen];
+    const maxId = cfg.catch.maxGenId;
+    if (state.currentMap === 8) { await doEliteGauntlet(cfg.elite(), maxId, null); return; }
+    await runGymBattle(node, cfg.leaders()[state.currentMap], maxId, null);
+    return;
+  }
   if (runGen === '3') {
     if (state.currentMap === 8) { await doEliteGauntlet(GEN3_ELITE_4, 386, null); return; }
     await runGymBattle(node, HOENN_GYM_LEADERS[state.currentMap], 386, null);
@@ -1086,18 +1112,26 @@ const VILLAIN_SPRITES = {
   aqua:  { admin: 'sprites/gen3/aqua-admin.png',  leader: 'sprites/gen3/archie.png' },
   magma: { admin: 'sprites/gen3/magma-admin.png', leader: 'sprites/gen3/maxie.png' },
 };
+// Per-encounter villain sprites for the single-faction gens (index = encounter).
+const VILLAIN_ENC_SPRITES = {
+  '4': ['sprites/gen4/galactic-grunt.png', 'sprites/gen4/mars.png', 'sprites/gen4/jupiter.png', 'sprites/gen4/cyrus.png'],
+  '5': ['sprites/gen5/plasma-grunt.png', 'sprites/gen5/n.png', 'sprites/gen5/n.png', 'sprites/gen5/ghetsis.png'],
+};
 function isRivalEnemyToken(name) {
   return name === 'silver' ||
-    (typeof name === 'string' && /^sprites\/gen3\/(aqua-admin|magma-admin|archie|maxie)\.png$/.test(name));
+    (typeof name === 'string' && /^sprites\/gen3\/(aqua-admin|magma-admin|archie|maxie)\.png$/.test(name)) ||
+    (typeof name === 'string' && /^sprites\/gen[45]\/(galactic-grunt|mars|jupiter|cyrus|plasma-grunt|n|ghetsis)\.png$/.test(name));
 }
 
 async function doSilverNode(node) {
   // Encounter index is keyed off the current map so skipping earlier rival
   // fights doesn't make a later one trivial.
   const RIVAL_ENC_BY_MAP = { 1: 0, 3: 1, 5: 2, 7: 3 };
-  const isVillain = getRunGen() === '3';
-  const encounters = isVillain
-    ? AQUA_MAGMA_ENCOUNTERS[state.villainTeam || 'aqua']
+  const runGenNow = getRunGen();
+  const isVillain = ['3', '4', '5'].includes(runGenNow);
+  const encounters = runGenNow === '3' ? AQUA_MAGMA_ENCOUNTERS[state.villainTeam || 'aqua']
+    : runGenNow === '4' ? GALACTIC_ENCOUNTERS
+    : runGenNow === '5' ? PLASMA_ENCOUNTERS
     : SILVER_ENCOUNTERS;
   const encounterIdx = Math.min(
     RIVAL_ENC_BY_MAP[state.currentMap] ?? (state.silverBeaten || 0),
@@ -1126,13 +1160,17 @@ async function doSilverNode(node) {
   document.getElementById('battle-title').textContent = isVillain
     ? `${encData.leader} wants to battle!`
     : 'Silver wants to battle!';
+  const factionName = runGenNow === '4' ? 'Team Galactic'
+    : runGenNow === '5' ? 'Team Plasma'
+    : `Team ${state.villainTeam === 'magma' ? 'Magma' : 'Aqua'}`;
   document.getElementById('battle-subtitle').textContent = isVillain
-    ? `Team ${state.villainTeam === 'magma' ? 'Magma' : 'Aqua'} Ambush — Double XP`
+    ? `${factionName} Ambush — Double XP`
     : 'Rival Battle — Double XP';
-  const villainCfg = VILLAIN_SPRITES[state.villainTeam || 'aqua'];
-  const enemyToken = isVillain
-    ? (encounterIdx === 3 ? villainCfg.leader : villainCfg.admin)
-    : 'silver';
+  const enemyToken = !isVillain ? 'silver'
+    : VILLAIN_ENC_SPRITES[runGenNow]
+      ? VILLAIN_ENC_SPRITES[runGenNow][encounterIdx]
+      : (encounterIdx === 3 ? VILLAIN_SPRITES[state.villainTeam || 'aqua'].leader
+                            : VILLAIN_SPRITES[state.villainTeam || 'aqua'].admin);
   const won = await new Promise(resolve => {
     // Rival battles give +4 base (Double XP), to every team member regardless
     // of whether they participated or fainted. Lucky egg etc. still apply.
@@ -1281,9 +1319,11 @@ async function doCatchNode(node) {
 
     // Map 1, layer 1: guarantee at least one Grass AND one Water Pokemon (non-nuzlocke only)
     if (!state.nuzlockeMode && state.currentMap === 0 && node.layer === 1) {
-      const isGen3Run = getRunGen() === '3';
-      const grassIds = isGen3Run ? [273, 285] : state.gen2Mode ? [187, 191] : [43, 69, 102]; // Gen3: Seedot, Shroomish | Gen2: Hoppip, Sunkern | Gen1: Oddish, Bellsprout, Exeggcute
-      const waterIds = isGen3Run ? [270, 283, 341] : state.gen2Mode ? [183, 194, 223] : [54, 60, 72, 79, 86, 98, 116, 118, 120, 129]; // Gen3: Lotad, Surskit, Corphish | Gen2: Marill, Wooper, Remoraid
+      const _cRunGen = getRunGen();
+      const GRASS_BY_GEN = { '3': [273, 285], '4': [406, 420], '5': [540, 546, 548] }; // Seedot/Shroomish | Budew/Cherubi | Sewaddle/Cottonee/Petilil
+      const WATER_BY_GEN = { '3': [270, 283, 341], '4': [418, 422, 456], '5': [535, 580, 592] }; // Lotad/Surskit/Corphish | Buizel/Shellos/Finneon | Tympole/Ducklett/Frillish
+      const grassIds = GRASS_BY_GEN[_cRunGen] || (state.gen2Mode ? [187, 191] : [43, 69, 102]);
+      const waterIds = WATER_BY_GEN[_cRunGen] || (state.gen2Mode ? [183, 194, 223] : [54, 60, 72, 79, 86, 98, 116, 118, 120, 129]);
       if (!choices.some(p => p.types?.includes('Grass'))) {
         const id = grassIds[Math.floor(rng() * grassIds.length)];
         const r = await fetchPokemonById(id);
@@ -2086,7 +2126,9 @@ async function doTrainerNode(node) {
   let speciesList;
   // Gen 3 archetypes without a gen3Pool fall through to the map's random BST
   // pool (which is already gen-range-correct) — never to the Gen 1 pool.
-  const activePool = getRunGen() === '3' ? (config.gen3Pool || null)
+  const _tRunGen = getRunGen();
+  const activePool = _tRunGen === '3' ? (config.gen3Pool || null)
+    : (_tRunGen === '4' || _tRunGen === '5') ? null
     : (state.gen2Mode && config.gen2Pool) ? config.gen2Pool : config.pool;
   if (activePool) {
     // Dedupe pool, filter out evolved forms the battle level can't reach, then shuffle
