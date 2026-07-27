@@ -680,13 +680,14 @@ function showMapScreen() {
   // Removes the light-gray outer ring the PokeAPI versions carry, which reads
   // as a white halo on dark surfaces.
   const BASE = 'sprites/badges/';
+  // Earned badges in colour; the ones still MISSING show as grayed-out
+  // silhouettes of the real badge, plus an at-a-glance X/8 counter.
   const badgeHtml = Array.from({ length: 8 }, (_, i) => {
     const earned = i < state.badges;
-    const label = genCfg.leaders()[i].badge;
-    return earned
-      ? `<img src="${BASE}${i + 1 + genCfg.badgeOffset}.png" alt="${label}" title="${label}" class="badge-icon-img">`
-      : `<span class="badge-icon-empty" title="${label}"></span>`;
-  }).join('');
+    const label = genCfg.leaders()[i].badge + (earned ? '' : ' — not earned yet');
+    return `<img src="${BASE}${i + 1 + genCfg.badgeOffset}.png" alt="${label}" title="${label}"
+      class="badge-icon-img${earned ? '' : ' badge-icon-missing'}">`;
+  }).join('') + `<span class="badge-count-num" title="Badges earned">${state.badges}/8</span>`;
   const badgeEl = document.getElementById('badge-count');
   if (badgeEl) badgeEl.innerHTML = badgeHtml;
   const badgePanelEl = document.getElementById('badge-count-panel');

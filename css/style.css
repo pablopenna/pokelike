@@ -856,8 +856,17 @@ h1, h2, .pixel-font {
   font-size: 12px;
 }
 #map-info { display: none; }
-#badge-count { display: grid; grid-template-columns: repeat(8, auto); gap: 3px; }
+#badge-count { display: grid; grid-template-columns: repeat(9, auto); gap: 3px; align-items: center; }
 .badge-icon-img { width: 22px; height: 22px; image-rendering: pixelated; }
+.badge-icon-missing { filter: grayscale(1) brightness(0.55); opacity: 0.45; }
+.badge-count-num {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--text-dim);
+  padding-left: 4px;
+  white-space: nowrap;
+}
+#badge-count-panel .badge-count-num { font-size: 8px; }
 .badge-icon-empty { display: inline-block; width: 22px; height: 22px; border-radius: 50%; border: 1px dashed var(--border); opacity: 0.3; }
 
 #map-container {
