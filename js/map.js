@@ -417,14 +417,14 @@ const UNOVA_GYM_LEADER_SPRITES = [
 ];
 
 const KANTO_GYM_LEADER_SPRITES = [
-  'https://play.pokemonshowdown.com/sprites/trainers/brock.png',
-  'https://play.pokemonshowdown.com/sprites/trainers/misty.png',
-  'https://play.pokemonshowdown.com/sprites/trainers/ltsurge.png',
-  'https://play.pokemonshowdown.com/sprites/trainers/erika.png',
-  'https://play.pokemonshowdown.com/sprites/trainers/janine.png',
-  'https://play.pokemonshowdown.com/sprites/trainers/sabrina.png',
-  'https://play.pokemonshowdown.com/sprites/trainers/blaine.png',
-  'https://play.pokemonshowdown.com/sprites/trainers/blue.png',
+  'sprites/trainers/brock.png',
+  'sprites/trainers/misty.png',
+  'sprites/trainers/ltsurge.png',
+  'sprites/trainers/erika.png',
+  'sprites/trainers/janine.png',
+  'sprites/trainers/sabrina.png',
+  'sprites/trainers/blaine.png',
+  'sprites/trainers/blue.png',
 ];
 
 function getNodeSprite(node) {
@@ -482,7 +482,7 @@ function getNodeSprite(node) {
       if (mi >= 0 && mi < 8) return UNOVA_GYM_LEADER_SPRITES[mi];
     }
     if (typeof state !== 'undefined' && state.gen2Mode) {
-      if (mi === 17) return 'https://play.pokemonshowdown.com/sprites/trainers/red.png';
+      if (mi === 17) return 'sprites/trainers/red.png';
       if (mi === 8)  return 'sprites/gen2/lance.png';
       if (mi >= 9 && mi < 17) return KANTO_GYM_LEADER_SPRITES[mi - 9];
       if (mi >= 0 && mi < 8) return JOHTO_GYM_LEADER_SPRITES[mi];
@@ -737,7 +737,7 @@ function renderMap(map, container, onNodeClick) {
           const totalW = ids.length * iconSize + (ids.length - 1) * gap;
           const startX = -(totalW / 2);
           const startY = ih / 2 - 24;
-          const BASE = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
+          const BASE = 'sprites/pokemon/';
           ids.forEach((id, i) => {
             const lvl = (trainerData.level ?? 0) + (trainerData.levelOffsets?.[i] ?? i);
             const cx = startX + i * (iconSize + gap) + iconSize / 2;
@@ -802,7 +802,7 @@ function renderMap(map, container, onNodeClick) {
         ? endlessState.currentRegion.trainers[endlessState.mapIndexInRegion]
         : null;
       if (trainerData?.speciesIds?.length) {
-        const BASE = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
+        const BASE = 'sprites/pokemon/';
         const imgs = trainerData.speciesIds.map(id =>
           `<img src="${BASE}${id}.png" style="width:28px;height:28px;image-rendering:pixelated;" onerror="this.style.display='none'">`
         ).join('');

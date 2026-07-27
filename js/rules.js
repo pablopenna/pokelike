@@ -20,6 +20,12 @@ const POKELIKE_RULES = {
   objective:
     "Beat all 8 Gym Leaders across the maps, then defeat the Elite Four and the Champion on the final map.",
 
+  stats_model:
+    "Base stats are era-accurate per generation (verified against Pokémon Showdown's per-gen data): " +
+    "a Gen 1 run uses Gen 1 stats (unified Special), Gen 2-5 runs use that era's values (pre-Gen-6 buffs). " +
+    "The Battle Tower uses the stage's generation. Types always follow the modern 18-type chart. " +
+    "Mythical Pokémon (Mew, Celebi, Jirachi, Deoxys, Manaphy line, Darkrai, Shaymin, Arceus, Victini, " +
+    "Keldeo, Meloetta, Genesect) appear only in campaign legendary encounters — never in the Battle Tower.",
   generations: {
     "1": "Gen I (Kanto) — Pokémon #1-151. 8 Kanto Gym Leaders, then the Kanto Elite Four + Champion.",
     "2": "Gen II (Johto) — Pokémon #1-251. 8 Johto Gym Leaders, then the Johto Elite Four + Lance.",
@@ -207,7 +213,9 @@ const _GUIDE_SECTIONS = [
       Team Plasma in Unova (maps 2/4/6/8): double XP for the whole
       team, full heal after, and Nuzlocke-exempt.</li>
     </ul>
-    <p>A per-map <b>level cap</b> equal to the leader's ace keeps you from out-leveling the challenge.</p>` },
+    <p>A per-map <b>level cap</b> equal to the leader's ace keeps you from out-leveling the challenge.</p>
+    <p>Stats are <b>era-accurate</b>: each generation plays with the base stats Pokémon had back then
+    (Gen 1's unified Special, pre-modern values elsewhere), matching Pokémon Showdown's data.</p>` },
   { id: 'battle', icon: '⚔️', title: 'Battles', html: `
     <p>Turn-based, one active Pokémon per side; benched teammates wait as Poké Balls.</p>
     <ul>

@@ -17,7 +17,7 @@ python3 -m http.server 8000
 
 `index.html` appends `?v=Date.now()` cache-busters to every CSS/JS include, so a plain reload always picks up edits.
 
-Internet is required at runtime: Pokémon/trainer sprites load from PokeAPI and Pokémon Showdown CDNs.
+All Pokémon/trainer/item sprites are bundled locally under `sprites/` (no runtime CDN dependency). `data/pokedex.json` holds modern stats (verified identical to Showdown's dex); `data/pokedex-mods.json` holds per-generation era overrides applied by `applyEraStats()`/`getStatsEra()` in data.js — each campaign gen (and Tower stage) battles with its era's stats. Types stay modern 18-type.
 
 Deployment is automatic: push to `main` → GitHub Pages via `.github/workflows/static.yml` (uploads the repo as-is). Live at https://pcasaspere.github.io/pokelike_v2/.
 

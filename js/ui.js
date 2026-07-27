@@ -136,9 +136,9 @@ function renderPokemonCard(pokemon, onClick, selected, dexCaught = false, hofSta
            onerror="this.src='';this.style.display='none'">
       ${pokemon.isShiny ? '<span class="shiny-badge">★ Shiny</span>' : ''}
       ${hofStarterBadge
-        ? '<img class="dex-caught-badge" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/great-ball.png" alt="HoF Starter" title="Already in your Hall of Fame PC">'
+        ? '<img class="dex-caught-badge" src="sprites/items/great-ball.png" alt="HoF Starter" title="Already in your Hall of Fame PC">'
         : dexCaught
-          ? '<img class="dex-caught-badge" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png" alt="Caught" title="Already in Pokédex">'
+          ? '<img class="dex-caught-badge" src="sprites/items/poke-ball.png" alt="Caught" title="Already in Pokédex">'
           : ''}
     </div>
     <div class="poke-name">${pokemon.nickname || pokemon.name}</div>
@@ -3272,7 +3272,7 @@ function renderEndlessRegionPanel(region, currentMapIndex) {
 }
 
 function attachBossTeamTooltips(container) {
-  const BASE = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
+  const BASE = 'sprites/pokemon/';
   let tip = document.getElementById('boss-team-tip');
   if (!tip) {
     tip = document.createElement('div');
@@ -3383,7 +3383,7 @@ function openMegaModal() {
   if (existing) { existing.remove(); return; }
   const owned = getMegaStones();
   const bracelet = hasMegaBracelet();
-  const SPRITES = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
+  const SPRITES = 'sprites/pokemon/';
   const cards = Object.entries(MEGA_FORMS).map(([baseId, m]) => {
     const has = owned.has(Number(baseId));
     return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:86px;padding:8px 2px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;${has ? '' : 'opacity:0.45;filter:grayscale(0.9);'}">
@@ -3442,8 +3442,8 @@ async function playEvoAnimation(pokemon, evoData) {
   if (!overlay) return;
 
   const newSpriteUrl = pokemon.isShiny
-    ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${evoData.into}.png`
-    : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${evoData.into}.png`;
+    ? `sprites/pokemon/shiny/${evoData.into}.png`
+    : `sprites/pokemon/${evoData.into}.png`;
   const oldSpriteUrl = pokemon.spriteUrl || '';
   const displayName  = pokemon.nickname || pokemon.name;
 
@@ -3495,8 +3495,8 @@ function showBranchingChoice(pokemon, choices) {
 
     for (const evoData of choices) {
       const spriteUrl = pokemon.isShiny
-        ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${evoData.into}.png`
-        : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${evoData.into}.png`;
+        ? `sprites/pokemon/shiny/${evoData.into}.png`
+        : `sprites/pokemon/${evoData.into}.png`;
 
       const card = document.createElement('div');
       card.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;' +
@@ -3560,8 +3560,8 @@ async function checkAndEvolveTeam() {
     pokemon.speciesId = evo.into;
     pokemon.name      = evo.name;
     pokemon.spriteUrl = pokemon.isShiny
-      ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${evo.into}.png`
-      : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${evo.into}.png`;
+      ? `sprites/pokemon/shiny/${evo.into}.png`
+      : `sprites/pokemon/${evo.into}.png`;
 
     if (newSpecies) {
       pokemon.types     = newSpecies.types;
@@ -3572,7 +3572,7 @@ async function checkAndEvolveTeam() {
       pokemon.currentHp = wasFainted ? 0 : Math.max(1, Math.floor(oldHpRatio * newMax));
     }
 
-    const normalUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.speciesId}.png`;
+    const normalUrl = `sprites/pokemon/${pokemon.speciesId}.png`;
     markPokedexCaught(pokemon.speciesId, pokemon.name, pokemon.types, normalUrl);
     if (pokemon.isShiny) markShinyDexCaught(pokemon.speciesId, pokemon.name, pokemon.types, pokemon.spriteUrl);
     checkDexAchievements();
@@ -3814,7 +3814,7 @@ async function openPokedexModal(initialTab = 'normal') {
     try { await loadStaticPokedex(); } catch {}
   }
 
-  const BASE = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
+  const BASE = 'sprites/pokemon/';
 
   const GEN_HEADERS = { 1: 'Generation I', 152: 'Generation II', 252: 'Generation III', 387: 'Generation IV', 494: 'Generation V' };
 
@@ -3875,7 +3875,7 @@ async function openPokedexModal(initialTab = 'normal') {
 
   function buildShinyGrid() {
     const dex = getShinyDex();
-    const BASE_SHINY = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/';
+    const BASE_SHINY = 'sprites/pokemon/shiny/';
     const count = Array.from({length: 649}, (_, i) => i + 1).filter(id => dex[id]).length;
     const genCounts = buildGenCounts(dex, (d, id) => !!d[id]);
     const grid = Array.from({ length: 649 }, (_, i) => {
@@ -3925,7 +3925,7 @@ async function openPokedexModal(initialTab = 'normal') {
             <span id="dex-progress-label" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:8px;font-weight:bold;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.8);pointer-events:none;"></span>
           </div>
           <div id="dex-charm-icon" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:2px solid #550000;background:#1a0004;flex-shrink:0;" title="Shiny Charm — complete the Gen 1 Pokédex to unlock. Doubles all shiny rates.">
-            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/shiny-charm.png" alt="Shiny Charm" style="width:24px;height:24px;image-rendering:pixelated;" onerror="this.style.display='none'">
+            <img src="sprites/items/shiny-charm.png" alt="Shiny Charm" style="width:24px;height:24px;image-rendering:pixelated;" onerror="this.style.display='none'">
           </div>
         </div>
         <div style="background:#1a1a2e;height:20px;overflow:hidden;position:relative;border:2px solid #333366;">
@@ -3981,8 +3981,8 @@ async function openPokedexModal(initialTab = 'normal') {
       if (!id) return;
       const name  = getSpeciesName(id);
       const types = getSpeciesTypes(id);
-      const spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
-      const shinySpriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${id}.png`;
+      const spriteUrl = `sprites/pokemon/${id}.png`;
+      const shinySpriteUrl = `sprites/pokemon/shiny/${id}.png`;
       openDexDetailModal(id, name, spriteUrl, shinySpriteUrl, types);
     };
   }
@@ -4109,7 +4109,7 @@ function openDexDetailModal(speciesId, name, spriteUrl, shinySpriteUrl, types) {
       nodeEl.className = 'dex-evo-node' + (isCurrent ? ' dex-evo-node--current' : '');
       const img = document.createElement('img');
       img.className = 'dex-evo-sprite';
-      img.src = poke?.spriteUrl || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${node.id}.png`;
+      img.src = poke?.spriteUrl || `sprites/pokemon/${node.id}.png`;
       img.alt = poke?.name || '';
       const nameEl = document.createElement('div');
       nameEl.className = 'dex-evo-name';
@@ -4815,7 +4815,7 @@ async function openHallOfFameModal() {
       })();
 
   function renderEntryHtml(e) {
-    const SPRITE_BASE = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/';
+    const SPRITE_BASE = 'sprites/pokemon/';
     const pokemonHtml = e.team.map(p => {
       // Slim entries store only speciesId — look up display fields at render
       // time. Legacy entries may still carry p.name / p.spriteUrl; prefer

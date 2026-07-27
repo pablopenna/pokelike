@@ -924,15 +924,44 @@ const CACHE_KEY_SPECIES = 'pkrl_species_list';
 // Keyed by numeric id. Avoids per-pokemon PokeAPI fetches for the 649 covered species.
 let _staticPokedex = null;
 let _staticPokedexPromise = null;
+// Per-era base-stat overrides (data/pokedex-mods.json, built from Showdown's
+// per-gen mod data): era '1'..'5' → { speciesId → baseStats }. Missing file
+// or entry ⇒ modern stats.
+let _pokedexMods = null;
 
 function loadStaticPokedex() {
   if (_staticPokedex) return Promise.resolve(_staticPokedex);
   if (_staticPokedexPromise) return _staticPokedexPromise;
+  fetch('data/pokedex-mods.json')
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { _pokedexMods = d || {}; })
+    .catch(() => { _pokedexMods = {}; });
   _staticPokedexPromise = fetch('data/pokedex.json')
     .then(r => r.ok ? r.json() : null)
     .then(d => { _staticPokedex = d || {}; return _staticPokedex; })
     .catch(() => { _staticPokedex = {}; return _staticPokedex; });
   return _staticPokedexPromise;
+}
+
+// Era-accurate base stats: each campaign generation battles with the stats
+// Pokémon actually had in that generation (verified against Showdown data —
+// Gen 1's unified Special, pre-Gen-6 values elsewhere). The Battle Tower uses
+// the stage's gen. Types always stay on the modern 18-type chart.
+function getStatsEra() {
+  if (typeof state === 'undefined' || !state) return null;
+  if (state.isEndlessMode) {
+    const s = (typeof endlessState !== 'undefined' && endlessState && endlessState.stageNumber) || 0;
+    return s >= 1 && s <= 5 ? String(s) : null;
+  }
+  const g = (typeof getRunGen === 'function') ? getRunGen() : null;
+  if (g === 'all') return '3';
+  return ['1', '2', '3', '4', '5'].includes(g) ? g : null;
+}
+
+function applyEraStats(id, baseStats) {
+  const era = getStatsEra();
+  const ov = era && _pokedexMods && _pokedexMods[era] && _pokedexMods[era][id];
+  return ov ? { ...ov } : baseStats;
 }
 
 // Best-effort sync lookup once the bundle is loaded
@@ -1017,12 +1046,13 @@ async function fetchPokemonById(idOrSlug) {
     const dex = _staticPokedex || await loadStaticPokedex();
     const entry = dex[idOrSlug];
     if (entry) {
+      const eraStats = applyEraStats(idOrSlug, entry.baseStats);
       return {
         id: idOrSlug,
         name: entry.name,
         types: entry.types,
-        baseStats: entry.baseStats,
-        bst: Object.values(entry.baseStats).reduce((a,b)=>a+b,0),
+        baseStats: eraStats,
+        bst: Object.values(eraStats).reduce((a,b)=>a+b,0),
         base_experience: entry.base_experience,
         spriteUrl: entry.spriteUrl,
         shinySpriteUrl: entry.shinySpriteUrl,
@@ -1053,8 +1083,8 @@ async function fetchPokemonById(idOrSlug) {
       baseStats,
       bst,
       // Use API sprite URL directly — it's correct for both base forms and variants
-      spriteUrl: d.sprites.front_default || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${d.id}.png`,
-      shinySpriteUrl: d.sprites.front_shiny || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${d.id}.png`,
+      spriteUrl: d.sprites.front_default || `sprites/pokemon/${d.id}.png`,
+      shinySpriteUrl: d.sprites.front_shiny || `sprites/pokemon/shiny/${d.id}.png`,
     };
     setCached(key, poke);
     return poke;
@@ -1132,6 +1162,10 @@ async function getSpeciesPool() {
 }
 
 // Legendary Pokemon (Gen 1-5) — excluded from wild/catch pools, available only via Legendary node
+// Mythical Pokémon — campaign-only prizes: the Battle Tower's legendary
+// encounters never offer them.
+const MYTHICAL_IDS = new Set([151, 251, 385, 386, 489, 490, 491, 492, 493, 494, 647, 648, 649]);
+
 const LEGENDARY_IDS = [
   144,145,146,150,151,                                             // Gen 1
   243,244,245,249,250,251,                                         // Gen 2
@@ -1382,8 +1416,8 @@ function createInstance(species, level, isShiny = false, moveTier = 1) {
     : species.baseStats;
   const maxHp = calcHp(baseStats.hp, lvl);
   const spriteUrl = isShiny
-    ? (species.shinySpriteUrl || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${id}.png`)
-    : (species.spriteUrl      || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`);
+    ? (species.shinySpriteUrl || `sprites/pokemon/shiny/${id}.png`)
+    : (species.spriteUrl      || `sprites/pokemon/${id}.png`);
   return {
     speciesId: id,
     name: species.name,
@@ -1815,13 +1849,14 @@ async function buildBossTeam(baseTeam, leaderType, maxGenId = 151, aceLevelTarge
 
 // Trainer sprites from Pokemon Showdown CDN
 const TRAINER_SVG = {
-  boy:  `<img src="https://play.pokemonshowdown.com/sprites/trainers/red.png"  alt="Red"  class="trainer-sprite-img" onerror="this.style.opacity='.3'">`,
-  girl: `<img src="https://play.pokemonshowdown.com/sprites/trainers/dawn.png" alt="Dawn" class="trainer-sprite-img" onerror="this.style.opacity='.3'">`,
-  npc:  `<img src="https://play.pokemonshowdown.com/sprites/trainers/youngster.png" alt="Trainer" class="trainer-sprite-img" onerror="this.style.opacity='.3'">`,
+  boy:  `<img src="sprites/trainers/red.png"  alt="Red"  class="trainer-sprite-img" onerror="this.style.opacity='.3'">`,
+  girl: `<img src="sprites/trainers/dawn.png" alt="Dawn" class="trainer-sprite-img" onerror="this.style.opacity='.3'">`,
+  npc:  `<img src="sprites/trainers/youngster.png" alt="Trainer" class="trainer-sprite-img" onerror="this.style.opacity='.3'">`,
 };
 
 // Name overrides for Pokemon Showdown trainer sprite filenames
-const SHOWDOWN_NAME_MAP = { 'gary': 'blue', 'lt. surge': 'ltsurge', 'lorelei': 'lorelei-gen3', 'agatha': 'agatha-gen3' };
+const SHOWDOWN_NAME_MAP = { 'gary': 'blue', 'lt. surge': 'ltsurge', 'lorelei': 'lorelei-gen3', 'agatha': 'agatha-gen3',
+  'drake': 'drake-gen3', 'phoebe': 'phoebe-gen3', 'crasher wake': 'crasherwake', 'tate & liza': 'tate' };
 
 function getTrainerImgHtml(trainerName) {
   // Local sprite path (e.g. "sprites/hiker.png") — use directly
@@ -1831,9 +1866,9 @@ function getTrainerImgHtml(trainerName) {
   }
   const key = trainerName.toLowerCase();
   const slug = SHOWDOWN_NAME_MAP[key] || key.replace(/[.']/g, '').replace(/\s+/g, '-');
-  return `<img src="https://play.pokemonshowdown.com/sprites/trainers/${slug}.png"
+  return `<img src="sprites/trainers/${slug}.png"
     alt="${trainerName}" class="trainer-sprite-img"
-    onerror="this.src='https://play.pokemonshowdown.com/sprites/trainers/youngster.png';this.onerror=null">`;
+    onerror="this.src='sprites/trainers/youngster.png';this.onerror=null">`;
 }
 
 // All evolutions across supported gens — stone/trade/friendship converted to sensible levels
@@ -2389,7 +2424,7 @@ const ACHIEVEMENTS = [
 function achievementIconHtml(a) {
   const m = a && a.img && /^(pkmn|shiny|item|badge):(.+)$/.exec(a.img);
   if (!m) return a ? a.icon : '';
-  const pokeApi = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/';
+  const pokeApi = 'sprites/';
   // Badges are served locally — the upstream sprites have a light-gray outer
   // ring that reads as a halo on dark surfaces (see scripts/clean-badges.py).
   const path = m[1] === 'pkmn'  ? `${pokeApi}pokemon/${m[2]}.png`
@@ -2495,7 +2530,7 @@ function incrementEliteWins() {
 // Items can override the URL with `iconUrl` for sprites not hosted on PokeAPI.
 function itemIconHtml(item, size = 24) {
   const slug = item.id.replace(/_/g, '-');
-  const url = item.iconUrl || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${slug}.png`;
+  const url = item.iconUrl || `sprites/items/${slug}.png`;
   const esc = item.icon.replace(/'/g, "\\'");
   return `<img src="${url}" alt="${item.name}" title="${item.name}" class="item-sprite-icon" `
        + `style="width:${size}px;height:${size}px;image-rendering:pixelated;vertical-align:middle;" `
@@ -2776,7 +2811,7 @@ function applyMegaForm(p) {
   p.name = 'Mega ' + m.megaName;
   p.types = [...m.types];
   p.baseStats = { ...m.baseStats };
-  p.spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.isShiny ? 'shiny/' : ''}${m.megaId}.png`;
+  p.spriteUrl = `sprites/pokemon/${p.isShiny ? 'shiny/' : ''}${m.megaId}.png`;
   const hpBuff = p.statBuffs?.hp ?? 0;
   p.maxHp = Math.floor(calcHp(m.baseStats.hp, p.level) * (1 + 0.1 * hpBuff));
   p.currentHp = p.currentHp <= 0 ? 0 : Math.max(1, Math.round(p.maxHp * ratio));

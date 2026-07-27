@@ -552,7 +552,7 @@ async function showStarterSelect() {
 }
 
 async function selectStarter(pokemon) {
-  const normalUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.speciesId}.png`;
+  const normalUrl = `sprites/pokemon/${pokemon.speciesId}.png`;
   markPokedexCaught(pokemon.speciesId, pokemon.name, pokemon.types, normalUrl);
   if (pokemon.isShiny) markShinyDexCaught(pokemon.speciesId, pokemon.name, pokemon.types, pokemon.spriteUrl);
   loadBuffsIntoPokemon(pokemon);
@@ -1206,7 +1206,7 @@ function showElitePrepScreen({ title, subtitle, nextBoss }) {
 
     const enemyEl = document.getElementById('elite-prep-enemy-team');
     enemyEl.innerHTML = nextBoss.team.map(p => {
-      const sprite = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.speciesId}.png`;
+      const sprite = `sprites/pokemon/${p.speciesId}.png`;
       const types  = (p.types || []).map(t => `<span class="type-badge type-${t.toLowerCase()}" style="font-size:5px;padding:1px 2px;">${t}</span>`).join('');
       const item   = p.heldItem ? `<div style="font-size:7px;color:var(--text-dim);margin-top:2px;">${itemIconHtml(p.heldItem, 12)}</div>` : '';
       return `<div class="elite-prep-enemy-slot">
@@ -1505,7 +1505,7 @@ function checkDexAchievements() {
 }
 
 function catchPokemon(pokemon, node) {
-  const normalUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.speciesId}.png`;
+  const normalUrl = `sprites/pokemon/${pokemon.speciesId}.png`;
   markPokedexCaught(pokemon.speciesId, pokemon.name, pokemon.types, normalUrl);
   if (pokemon.isShiny) markShinyDexCaught(pokemon.speciesId, pokemon.name, pokemon.types, pokemon.spriteUrl);
   checkDexAchievements();
@@ -1954,8 +1954,8 @@ async function applyEvolution(pokemon) {
   pokemon.speciesId = evo.into;
   pokemon.name      = evo.name;
   pokemon.spriteUrl = pokemon.isShiny
-    ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${evo.into}.png`
-    : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${evo.into}.png`;
+    ? `sprites/pokemon/shiny/${evo.into}.png`
+    : `sprites/pokemon/${evo.into}.png`;
 
   if (newSpecies) {
     pokemon.types     = newSpecies.types;
@@ -1966,7 +1966,7 @@ async function applyEvolution(pokemon) {
     pokemon.currentHp = Math.max(1, Math.floor(oldHpRatio * newMax));
   }
 
-  const normalUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.speciesId}.png`;
+  const normalUrl = `sprites/pokemon/${pokemon.speciesId}.png`;
   markPokedexCaught(pokemon.speciesId, pokemon.name, pokemon.types, normalUrl);
   if (pokemon.isShiny) markShinyDexCaught(pokemon.speciesId, pokemon.name, pokemon.types, pokemon.spriteUrl);
   checkDexAchievements();
@@ -2199,7 +2199,9 @@ async function doLegendaryNode(node) {
     minLegendId = range.minGenId;
     maxLegendId = range.maxGenId;
   }
-  const available = LEGENDARY_IDS.filter(id => id >= minLegendId && id <= maxLegendId && !teamLegendIds.includes(id));
+  const available = LEGENDARY_IDS.filter(id => id >= minLegendId && id <= maxLegendId
+    && !teamLegendIds.includes(id)
+    && !(state.isEndlessMode && MYTHICAL_IDS.has(id))); // mythicals are campaign-only
   if (available.length === 0) { advanceFromNode(state.map, node.id); showMapScreen(); return; }
   const legendId = available[Math.floor(rng() * available.length)];
   const species = await fetchPokemonById(legendId);
@@ -2222,7 +2224,7 @@ async function doLegendaryNode(node) {
       return;
     }
     // Win — offer to add legendary to team
-    const normalUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${legendary.speciesId}.png`;
+    const normalUrl = `sprites/pokemon/${legendary.speciesId}.png`;
     markPokedexCaught(legendary.speciesId, legendary.name, legendary.types, normalUrl);
     if (legendary.isShiny) markShinyDexCaught(legendary.speciesId, legendary.name, legendary.types, legendary.spriteUrl);
     checkDexAchievements();
@@ -2380,7 +2382,7 @@ async function doTradeNode(node) {
       if (released.heldItem) state.items.push(released.heldItem);
       loadBuffsIntoPokemon(offer);
       state.team.splice(idx, 1, offer);
-      const normalUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${offer.speciesId}.png`;
+      const normalUrl = `sprites/pokemon/${offer.speciesId}.png`;
       markPokedexCaught(offer.speciesId, offer.name, offer.types, normalUrl);
       if (offer.isShiny) markShinyDexCaught(offer.speciesId, offer.name, offer.types, offer.spriteUrl);
       checkDexAchievements();
@@ -2432,7 +2434,7 @@ async function doShinyNode(node) {
     <button id="btn-skip-shiny" class="btn-secondary" style="margin-top:6px;">Skip</button>
   `;
   document.getElementById('btn-take-shiny').onclick = () => {
-    const normalUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${shiny.speciesId}.png`;
+    const normalUrl = `sprites/pokemon/${shiny.speciesId}.png`;
     markPokedexCaught(shiny.speciesId, shiny.name, shiny.types, normalUrl);
     markShinyDexCaught(shiny.speciesId, shiny.name, shiny.types, shiny.spriteUrl);
     checkDexAchievements();
