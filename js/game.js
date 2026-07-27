@@ -1985,6 +1985,28 @@ function doPokeCenterNode(node) {
 
 // ---- Trainer Battle Node ----
 
+// Gens 4/5 have no hand-curated archetype pools — derive them from the
+// archetype's specialty types within the run's dex slice, so a Hiker still
+// fields Rock/Ground mons in Sinnoh/Unova and the map label stays truthful.
+// (aceTrainer/oldGuy are 'Various' → map's random BST pool.)
+const ARCHETYPE_TYPES = {
+  bugCatcher: ['Bug'], hiker: ['Rock', 'Ground'], fisher: ['Water'], captain: ['Water'],
+  fireSpitter: ['Fire'], policeman: ['Fire'], Scientist: ['Electric', 'Poison'],
+  teamRocket: ['Poison'], biker: ['Poison'], birdCatcher: ['Flying'],
+  nerd: ['Electric'], medium: ['Ghost'], schoolBoy: ['Normal'],
+};
+function archetypeGenPool(key, range) {
+  const types = ARCHETYPE_TYPES[key];
+  if (!types) return null;
+  const ids = new Set();
+  for (const t of types) {
+    for (const id of getSpeciesIdsByType(t, range.maxGenId)) {
+      if (id >= range.minGenId) ids.add(id);
+    }
+  }
+  return ids.size ? [...ids] : null;
+}
+
 // Species pools for each trainer archetype (Gen 1 IDs).
 // null = use the map's random BST pool instead.
 const TRAINER_BATTLE_CONFIG = {
@@ -2128,7 +2150,7 @@ async function doTrainerNode(node) {
   // pool (which is already gen-range-correct) — never to the Gen 1 pool.
   const _tRunGen = getRunGen();
   const activePool = _tRunGen === '3' ? (config.gen3Pool || null)
-    : (_tRunGen === '4' || _tRunGen === '5') ? null
+    : (_tRunGen === '4' || _tRunGen === '5') ? archetypeGenPool(key, GEN_RUN_CONFIG[_tRunGen].catch)
     : (state.gen2Mode && config.gen2Pool) ? config.gen2Pool : config.pool;
   if (activePool) {
     // Dedupe pool, filter out evolved forms the battle level can't reach, then shuffle
