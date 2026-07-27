@@ -27,7 +27,7 @@ All JS files are classic scripts sharing one global scope, loaded in a fixed ord
 
 `data` → `map` → `battle` → `endless` → `ui` → `game` → `rules` → `cloud-save`
 
-- `js/data.js` — TYPE_CHART, MOVE_POOL (per-type physical/special move tiers), gym leaders, Elite Four, items. Also fetches the bundled `data/pokedex.json` once at boot (names/types/stats for #1–251).
+- `js/data.js` — TYPE_CHART, MOVE_POOL (per-type physical/special move tiers), gym leaders, Elite Four, items. Also fetches the bundled `data/pokedex.json` once at boot (names/types/stats for #1–649 — campaign uses gens 1-3; Battle Tower stages 4-5 reach Sinnoh/Unova).
 - `js/map.js` — branching node-map generation. `NODE_TYPES` and per-layer `NODE_WEIGHTS` control what appears on each map layer.
 - `js/battle.js` — the ONE battle engine: a round-stepper (`runBattleRound`/`executeTurn`) driven through an injected `io` object. `runBattle` (async) is the auto driver (Battle Tower); `runInteractiveBattle` in game.js is the campaign driver. The auto path's rng/event order is load-bearing for Tower replays — verify battle.js changes with a seeded golden-log harness (Node vm + mulberry32 rng stub, diff `detailedLog` at fixed seeds) before shipping. Struggle fallbacks are Tower-only; the campaign resolves mutual-immunity standoffs via the deadlock flow in `runBattleScreen`.
 - `js/endless.js` — Battle Tower mode (auto-battle gauntlet) with its own trait/tier system and its own seeded RNG; state is separate from the main run.
