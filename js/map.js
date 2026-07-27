@@ -673,6 +673,23 @@ function renderMap(map, container, onNodeClick) {
       const iw = (isHumanFigure ? (isBossNode ? 52 : 38) : (isBossNode ? 52 : 40)) * nodeScale;
       const ih = (isHumanFigure ? (isBossNode ? 52 : 52) : (isBossNode ? 52 : 40)) * nodeScale;
 
+      // Rival/villain nodes get a soft golden aura behind the sprite so the
+      // special encounter stands out from regular trainers on the route.
+      if (node.type === NODE_TYPES.SILVER) {
+        const aura = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        aura.setAttribute('r', 26 * nodeScale);
+        aura.setAttribute('fill', 'rgba(255, 205, 60, 0.16)');
+        aura.setAttribute('stroke', 'rgba(255, 205, 60, 0.65)');
+        aura.setAttribute('stroke-width', 2);
+        const pulse = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
+        pulse.setAttribute('attributeName', 'opacity');
+        pulse.setAttribute('values', '1;0.5;1');
+        pulse.setAttribute('dur', '2s');
+        pulse.setAttribute('repeatCount', 'indefinite');
+        aura.appendChild(pulse);
+        g.appendChild(aura);
+      }
+
       const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
       img.setAttribute('href', sprite.replace(/ /g, '%20'));
       img.setAttribute('x', -(iw / 2));
