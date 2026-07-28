@@ -2372,8 +2372,14 @@ function spawnImpactFX(targetEl, { crit = false, superEff = false, damage = 0 } 
     const dn = document.createElement('div');
     dn.className = 'dmg-number' + (crit ? ' dmg-number--crit' : '');
     dn.textContent = '-' + damage;
+    // Stack consecutive hits upward so overlapping numbers stay readable.
+    const prior = targetEl.querySelectorAll('.dmg-number').length;
+    if (prior) dn.style.top = `calc(32% - ${Math.min(prior, 3) * 16}px)`;
+    // Hold on screen long enough to actually read (shrinks at skip speeds).
+    const life = 2000 / Math.max(1, Math.min(battleSpeedMultiplier, 4));
+    dn.style.animationDuration = life + 'ms';
     targetEl.appendChild(dn);
-    setTimeout(() => dn.remove(), 920);
+    setTimeout(() => dn.remove(), life + 60);
   }
 }
 
