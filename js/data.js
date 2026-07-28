@@ -954,7 +954,7 @@ function getStatsEra() {
     return s >= 1 && s <= 5 ? String(s) : null;
   }
   const g = (typeof getRunGen === 'function') ? getRunGen() : null;
-  if (g === 'all') return '3';
+  if (g === 'all') return null; // Tot mixes every gen — modern stats
   return ['1', '2', '3', '4', '5'].includes(g) ? g : null;
 }
 
@@ -1761,8 +1761,8 @@ const GEN_RUN_CONFIG = {
          levels: () => GEN5_MAP_LEVEL_RANGES, badgeOffset: 32,
          mapBg: i => `ui/mapsGen2/${i + 1}.png`,
          eliteTitle: 'Elite Four & Alder' },
-  'all': { starters: [...STARTER_IDS, ...GEN2_STARTER_IDS, ...GEN3_STARTER_IDS],
-         catch: { minGenId: 1, maxGenId: 386 },
+  'all': { starters: [...STARTER_IDS, ...GEN2_STARTER_IDS, ...GEN3_STARTER_IDS, ...GEN4_STARTER_IDS, ...GEN5_STARTER_IDS],
+         catch: { minGenId: 1, maxGenId: 649 },
          leaders: () => GYM_LEADERS, elite: () => ELITE_4,
          levels: () => MAP_LEVEL_RANGES, badgeOffset: 0,
          mapBg: i => `ui/mapsNormalMode/map${i + 1}.png`,

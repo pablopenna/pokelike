@@ -463,7 +463,9 @@ function getNodeSprite(node) {
     if (typeof state !== 'undefined' && state.bothGens) {
       if (mi >= 0 && mi < 8) {
         const gen = (state.gymGens && state.gymGens[mi]) || 1;
-        return gen === 3 ? HOENN_GYM_LEADER_SPRITES[mi]
+        return gen === 5 ? UNOVA_GYM_LEADER_SPRITES[mi]
+             : gen === 4 ? SINNOH_GYM_LEADER_SPRITES[mi]
+             : gen === 3 ? HOENN_GYM_LEADER_SPRITES[mi]
              : gen === 2 ? JOHTO_GYM_LEADER_SPRITES[mi]
              : GYM_LEADER_SPRITES[mi];
       }
@@ -953,8 +955,8 @@ function getNodeLabel(node) {
       rolledGen === 3;
     const isGen2 = !isGen3 && ((typeof state !== 'undefined' && state.gen2Mode) || rolledGen === 2);
     const _lblGen = typeof state !== 'undefined' && typeof getRunGen === 'function' ? getRunGen() : '1';
-    const leaders = _lblGen === '4' && typeof SINNOH_GYM_LEADERS !== 'undefined' ? SINNOH_GYM_LEADERS
-      : _lblGen === '5' && typeof UNOVA_GYM_LEADERS !== 'undefined' ? UNOVA_GYM_LEADERS
+    const leaders = (_lblGen === '4' || rolledGen === 4) && typeof SINNOH_GYM_LEADERS !== 'undefined' ? SINNOH_GYM_LEADERS
+      : (_lblGen === '5' || rolledGen === 5) && typeof UNOVA_GYM_LEADERS !== 'undefined' ? UNOVA_GYM_LEADERS
       : isGen3 ? (typeof HOENN_GYM_LEADERS !== 'undefined' ? HOENN_GYM_LEADERS : null)
       : isGen2 ? (typeof JOHTO_GYM_LEADERS !== 'undefined' ? JOHTO_GYM_LEADERS : null)
       : (typeof GYM_LEADERS !== 'undefined' ? GYM_LEADERS : null);

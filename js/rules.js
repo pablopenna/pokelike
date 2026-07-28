@@ -42,9 +42,10 @@ const POKELIKE_RULES = {
       "8 Unova Gym Leaders (Cilan through Drayden), then the Unova Elite Four + Champion Alder. " +
       "Team Plasma ambushes you at the rival slots on maps 2/4/6/8 (N twice), ending with Ghetsis.",
     both:
-      "Tot (all gens) — Pokémon #1-386 catchable. Each map's Gym is RANDOM among that slot's Gen I, " +
-      "Gen II and Gen III leader. The final league is 4 random Elite Four members + 1 random Champion. " +
-      "You may choose any of the 9 starters (all gens). Boss levels are normalized to a per-map " +
+      "Tot (all gens) — unlocked by winning ALL five campaigns. Pokémon #1-649 catchable. Each map's " +
+      "Gym is RANDOM among that slot's Gen I-V leaders. The final league is 4 random Elite Four members " +
+      "+ 1 random Champion (any gen). " +
+      "You may choose any of the 15 starters (all gens). Boss levels are normalized to a per-map " +
       "target so difficulty stays consistent.",
   },
 
@@ -126,7 +127,7 @@ const POKELIKE_RULES = {
       "Selectors for driving the game programmatically. Buttons are clicked with .click(); read state " +
       "from the DOM. The current screen is the visible element with class 'screen'.",
     title_screen: {
-      generation_toggle: '#gen-toggle .gen-btn[data-gen="1" | "2" | "3" | "4" | "5" | "both"]  (click to select generation; "both" = Tot = gens 1-3 mixed; "4"/"5" are locked until the previous gen is beaten)',
+      generation_toggle: '#gen-toggle .gen-btn[data-gen="1" | "2" | "3" | "4" | "5" | "both"]  (click to select generation; "both" = Tot = all gens mixed, locked until every gen is beaten; "4"/"5" are locked until the previous gen is beaten)',
       new_run:
         "#btn-new-run  (New Adventure — opens the professor dialog; pick NORMAL/NUZLOCKE via " +
         ".gba-choice buttons, then the wipe rule for Normal; click the overlay to advance text)",
@@ -190,7 +191,7 @@ const _GUIDE_SECTIONS = [
       <li><b>Region cards</b> on the title screen pick your generation: <b>Kanto (I)</b> #1–151,
       <b>Johto (II)</b> #152–251, <b>Hoenn (III)</b> #252–386, <b>Sinnoh (IV)</b> #387–493
       (unlocked by winning Hoenn), <b>Unova (V)</b> #494–649 (unlocked by winning Sinnoh),
-      or <b>Tot</b> — the first three mixed:
+      or <b>Tot</b> — all five mixed (unlocked by winning every campaign):
       every map's gym is rolled among the three regions' leaders and the final league mixes all gens.</li>
       <li>Press <b>New Adventure</b> and the professor asks how you'll travel: <b>NORMAL</b> — the standard
       run — or <b>NUZLOCKE</b> — hardcore, any Pokémon that faints is lost forever (rival battles excepted).</li>

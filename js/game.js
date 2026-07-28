@@ -171,24 +171,35 @@ async function initGame() {
   // means "Tot" (all generations combined) and maps to runGen 'all'.
   const _savedGen = localStorage.getItem('poke_selected_gen');
   let selectedGen = (['2', '3', '4', '5', 'both'].includes(_savedGen)) ? _savedGen : '1'; // '1'..'5' | 'both'
-  // Gens 4/5 unlock in sequence: win Hoenn to open Sinnoh, win Sinnoh to open Unova.
-  if ((selectedGen === '4' && !isGenBeaten('3')) || (selectedGen === '5' && !isGenBeaten('4'))) selectedGen = '1';
+  // Gens 4/5 unlock in sequence: win Hoenn to open Sinnoh, win Sinnoh to open
+  // Unova. Tot (all gens mixed) demands the full crown: every gen beaten.
+  const allGensBeaten = () => ['1', '2', '3', '4', '5'].every(isGenBeaten);
+  if ((selectedGen === '4' && !isGenBeaten('3')) || (selectedGen === '5' && !isGenBeaten('4'))
+      || (selectedGen === 'both' && !allGensBeaten())) selectedGen = '1';
   const syncGenButtons = () => {
     document.querySelectorAll('#gen-toggle .gen-btn').forEach(b => {
       b.classList.toggle('gen-btn--active', String(b.dataset.gen) === selectedGen);
       const g = String(b.dataset.gen);
-      const locked = (g === '4' && !isGenBeaten('3')) || (g === '5' && !isGenBeaten('4'));
+      const locked = (g === '4' && !isGenBeaten('3')) || (g === '5' && !isGenBeaten('4'))
+        || (g === 'both' && !allGensBeaten());
       b.classList.toggle('gen-btn--locked', locked);
-      b.title = locked ? (g === '4' ? 'Win the Hoenn campaign to unlock Sinnoh' : 'Win the Sinnoh campaign to unlock Unova') : '';
+      b.title = !locked ? ''
+        : g === '4' ? 'Win the Hoenn campaign to unlock Sinnoh'
+        : g === '5' ? 'Win the Sinnoh campaign to unlock Unova'
+        : 'Win ALL five campaigns to unlock Tot';
     });
   };
   syncGenButtons();
   document.querySelectorAll('#gen-toggle .gen-btn').forEach(btn => {
     btn.onclick = () => {
       const g = String(btn.dataset.gen || '1');
-      if ((g === '4' && !isGenBeaten('3')) || (g === '5' && !isGenBeaten('4'))) {
-        showAchievementToast({ icon: '🔒', name: g === '4' ? 'Sinnoh is locked' : 'Unova is locked',
-          desc: g === '4' ? 'Win the Hoenn (Gen III) campaign first!' : 'Win the Sinnoh (Gen IV) campaign first!' });
+      if ((g === '4' && !isGenBeaten('3')) || (g === '5' && !isGenBeaten('4'))
+          || (g === 'both' && !allGensBeaten())) {
+        showAchievementToast({ icon: '🔒',
+          name: g === '4' ? 'Sinnoh is locked' : g === '5' ? 'Unova is locked' : 'Tot is locked',
+          desc: g === '4' ? 'Win the Hoenn (Gen III) campaign first!'
+            : g === '5' ? 'Win the Sinnoh (Gen IV) campaign first!'
+            : 'Win all five campaigns to mix every generation!' });
         return;
       }
       selectedGen = g;
@@ -266,7 +277,8 @@ async function initGame() {
 // blackout that ends the run.
 const REGION_NAMES = { '1': 'KANTO', '2': 'JOHTO', '3': 'HOENN', '4': 'SINNOH', '5': 'UNOVA', 'all': 'KANTO, JOHTO and HOENN' };
 async function startAdventureFlow(gen) {
-  if ((gen === '4' && !isGenBeaten('3')) || (gen === '5' && !isGenBeaten('4'))) gen = '1';
+  if ((gen === '4' && !isGenBeaten('3')) || (gen === '5' && !isGenBeaten('4'))
+      || (gen === 'all' && !['1', '2', '3', '4', '5'].every(isGenBeaten))) gen = '1';
   const region = REGION_NAMES[gen] || 'KANTO';
   const mode = await showGbaDialog({
     lines: [
@@ -329,11 +341,11 @@ async function startNewRun(nuzlockeMode = false, gen = '1', forcedStarterId = nu
   if (bothGens) {
     // Roll which generation's leader appears at each gym slot, and a random
     // Elite Four lineup (4 members + champion), mixing all generations.
-    state.gymGens = Array.from({ length: 8 }, () => 1 + Math.floor(rng() * 3));
+    state.gymGens = Array.from({ length: 8 }, () => 1 + Math.floor(rng() * 5));
     const elitePool = [];
-    for (let idx = 0; idx < 4; idx++) { elitePool.push({ gen: 1, idx }); elitePool.push({ gen: 2, idx }); elitePool.push({ gen: 3, idx }); }
+    for (let idx = 0; idx < 4; idx++) for (const g of [1, 2, 3, 4, 5]) elitePool.push({ gen: g, idx });
     for (let i = elitePool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [elitePool[i], elitePool[j]] = [elitePool[j], elitePool[i]]; }
-    const champ = { gen: 1 + Math.floor(rng() * 3), idx: 4 };
+    const champ = { gen: 1 + Math.floor(rng() * 5), idx: 4 };
     state.eliteLineup = [...elitePool.slice(0, 4), champ];
   }
   if (forcedStarterId && savedTrainer) {
@@ -1078,13 +1090,20 @@ async function runGymBattle(node, leader, maxGenId, aceTarget) {
 
 // Highest species id a gym/elite's filler may use, per rolled gen.
 const GEN_MAX_SPECIES_ID = { 1: 151, 2: 251, 3: 386, 4: 493, 5: 649 };
+function LEADER_TABLE_BY_GEN(gen) {
+  return gen === 5 ? UNOVA_GYM_LEADERS
+    : gen === 4 ? SINNOH_GYM_LEADERS
+    : gen === 3 ? HOENN_GYM_LEADERS
+    : gen === 2 ? JOHTO_GYM_LEADERS
+    : GYM_LEADERS;
+}
 
 async function doBossNode(node) {
   // Tot: gym is a random Gen 1/2/3 leader for this slot; levels normalised.
   if (state.bothGens) {
     if (state.currentMap === 8) { await doBothElite4(); return; }
     const gen = (state.gymGens && state.gymGens[state.currentMap]) || 1;
-    const leader = (gen === 3 ? HOENN_GYM_LEADERS : gen === 2 ? JOHTO_GYM_LEADERS : GYM_LEADERS)[state.currentMap];
+    const leader = LEADER_TABLE_BY_GEN(gen)[state.currentMap];
     await runGymBattle(node, leader, GEN_MAX_SPECIES_ID[gen] || 151, bothGensMapAceLevel(state.currentMap));
     return;
   }
@@ -1116,7 +1135,11 @@ async function doBothElite4() {
   const lineup = state.eliteLineup || [];
   const memberAt = i => {
     const slot = lineup[i];
-    return (slot.gen === 3 ? GEN3_ELITE_4 : slot.gen === 2 ? GEN2_ELITE_4 : ELITE_4)[slot.idx];
+    return (slot.gen === 5 ? GEN5_ELITE_4
+      : slot.gen === 4 ? GEN4_ELITE_4
+      : slot.gen === 3 ? GEN3_ELITE_4
+      : slot.gen === 2 ? GEN2_ELITE_4
+      : ELITE_4)[slot.idx];
   };
   const resumeFrom = state.eliteIndex;
   for (let i = state.eliteIndex; i < lineup.length; i++) {
@@ -1135,7 +1158,7 @@ async function doBothElite4() {
       });
     }
     const target = Math.max(...ELITE_4[Math.min(i, ELITE_4.length - 1)].team.map(p => p.level));
-    const built = await buildBossTeam(member.team, member.type, 386, target, { fillerSpread: 0, equipFiller: true });
+    const built = await buildBossTeam(member.team, member.type, 649, target, { fillerSpread: 0, equipFiller: true });
     const enemyTeam = built.map(p => ({ ...createInstance(p, p.level, false, 2), heldItem: p.heldItem || null }));
 
     showScreen('battle-screen');
