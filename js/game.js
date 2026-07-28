@@ -1106,43 +1106,34 @@ async function doBossNode(node) {
     await runGymBattle(node, JOHTO_GYM_LEADERS[state.currentMap], 251, null);
     return;
   }
-  if (state.currentMap === 8) { await doElite4(); return; }
+  if (state.currentMap === 8) { await doEliteGauntlet(ELITE_4, 151, null); return; }
   await runGymBattle(node, GYM_LEADERS[state.currentMap], 151, null);
-}
-
-async function doElite4() {
-  const bosses = ELITE_4;
-  for (let i = state.eliteIndex; i < bosses.length; i++) {
-    state.eliteIndex = i;
-    const boss = bosses[i];
-    const built = await buildBossTeam(boss.team, boss.type, 151, null, { fillerSpread: 0, equipFiller: true });
-    const enemyTeam = built.map(p => createInstance(p, p.level, false, 2));
-
-    showScreen('battle-screen');
-    document.getElementById('battle-title').textContent = `${boss.title}: ${boss.name}!`;
-    document.getElementById('battle-subtitle').textContent = i === 4 ? 'Final Battle!' : `Elite Four - Battle ${i+1}/4`;
-    const won = await new Promise(resolve => {
-      runBattleScreen(enemyTeam, true, () => resolve(true), () => resolve(false), boss.name);
-    });
-
-    if (!won) { showGameOver(); return; }
-    if (i < bosses.length - 1) {
-      await showEliteTransition(boss.name, i + 1);
-    }
-  }
-  const eliteAch = unlockAchievement('elite_four');
-  if (eliteAch) showAchievementToast(eliteAch);
-  showWinScreen();
 }
 
 // I+II league: the randomly-chosen lineup (4 Elite + champion, mixing gens),
 // each padded to 6 and normalised to the Gen 1 Elite Four difficulty curve.
 async function doBothElite4() {
   const lineup = state.eliteLineup || [];
+  const memberAt = i => {
+    const slot = lineup[i];
+    return (slot.gen === 3 ? GEN3_ELITE_4 : slot.gen === 2 ? GEN2_ELITE_4 : ELITE_4)[slot.idx];
+  };
+  const resumeFrom = state.eliteIndex;
   for (let i = state.eliteIndex; i < lineup.length; i++) {
     state.eliteIndex = i;
-    const slot = lineup[i];
-    const member = (slot.gen === 3 ? GEN3_ELITE_4 : slot.gen === 2 ? GEN2_ELITE_4 : ELITE_4)[slot.idx];
+    saveRun();
+    const member = memberAt(i);
+    // Prep screen before each battle (reorder team / use items) — skipped on
+    // the resumed fight so a reload drops straight back into the battle.
+    const isResumedFight = i === resumeFrom && resumeFrom > 0;
+    if (!isResumedFight) {
+      const prevName = i === 0 ? null : memberAt(i - 1).name;
+      await showElitePrepScreen({
+        title: prevName ? `${prevName} defeated!` : 'The Elite Four await!',
+        subtitle: `Next: ${member.name} (${member.type}) — Battle ${i + 1}/${lineup.length}`,
+        nextBoss: member,
+      });
+    }
     const target = Math.max(...ELITE_4[Math.min(i, ELITE_4.length - 1)].team.map(p => p.level));
     const built = await buildBossTeam(member.team, member.type, 386, target, { fillerSpread: 0, equipFiller: true });
     const enemyTeam = built.map(p => ({ ...createInstance(p, p.level, false, 2), heldItem: p.heldItem || null }));
@@ -1154,7 +1145,6 @@ async function doBothElite4() {
       runBattleScreen(enemyTeam, true, () => resolve(true), () => resolve(false), member.name);
     });
     if (!won) { showGameOver(); return; }
-    if (i < lineup.length - 1) await showEliteTransition(member.name, i + 1);
   }
   const eliteAch = unlockAchievement('elite_four');
   if (eliteAch) showAchievementToast(eliteAch);
@@ -1239,18 +1229,6 @@ async function doSilverNode(node) {
   state.silverBeaten = (state.silverBeaten || 0) + 1;
   advanceFromNode(state.map, node.id);
   showMapScreen();
-}
-
-function showEliteTransition(defeatedName, nextIndex, bossArray = ELITE_4) {
-  return new Promise(resolve => {
-    const el = document.getElementById('transition-screen');
-    if (!el) { resolve(); return; }
-    document.getElementById('transition-msg').textContent = `${defeatedName} defeated!`;
-    document.getElementById('transition-sub').textContent =
-      nextIndex < bossArray.length - 1 ? `Next: ${bossArray[nextIndex].name}...` : `The Champion awaits!`;
-    showScreen('transition-screen');
-    setTimeout(() => resolve(), 2000);
-  });
 }
 
 // Prep screen shown between Elite 4 / Champion battles. Shows the next
