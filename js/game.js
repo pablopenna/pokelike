@@ -260,6 +260,7 @@ async function initGame() {
     continueBtn.onclick = async () => {
       if (!loadRun()) return;
       if (state.pendingRetry) { showLevelRetryScreen(); return; }
+      if (Array.isArray(state.pendingPerkDraft) && state.pendingPerkDraft.length) await showPerkDraft();
       if (state.currentNode && !state.currentNode.visited) {
         await onNodeClick(state.currentNode);
       } else {
@@ -371,7 +372,7 @@ async function pickForcedStarter(speciesId, forcedShiny = null) {
   }
   const isShiny = typeof forcedShiny === 'boolean'
     ? forcedShiny
-    : rng() < (hasShinyCharm() ? 0.02 : 0.01);
+    : rng() < shinyRollOdds();
   const inst = createInstance(species, 5, isShiny, 0);
   await selectStarter(inst);
 }
@@ -460,7 +461,7 @@ async function showStarterSelect() {
       const starterRow = document.createElement('div');
       starterRow.className = 'starter-card-row';
       for (const species of starterSpecies) {
-        const isShiny = rng() < (hasShinyCharm() ? 0.02 : 0.01);
+        const isShiny = rng() < shinyRollOdds();
         const inst = createInstance(species, startLevel, isShiny, 0);
         const starterCaught = _isDexCaught(getPokedex()[inst.speciesId]);
         const wrapper = document.createElement('div');
@@ -604,7 +605,7 @@ async function showStarterSelect() {
 
     for (const species of starters) {
       if (!species) continue;
-      const isShiny = rng() < (hasShinyCharm() ? 0.02 : 0.01);
+      const isShiny = rng() < shinyRollOdds();
       const inst = createInstance(species, startLevel, isShiny, 0);
       const starterCaught = _isDexCaught(getPokedex()[inst.speciesId]);
       const wrapper = document.createElement('div');
@@ -647,6 +648,9 @@ function startMap(mapIndex) {
   if (mapIndex > 0) {
     for (const p of state.team) {
       p.currentHp = p.maxHp;
+    }
+    if (hasPerk('head_start')) {
+      applyLevelGain(state.team, [], new Set(state.team.map((_, i) => i)), 0, false, 1, getLevelCapForMap());
     }
   }
 
@@ -796,7 +800,8 @@ async function onNodeClick(node) {
       resolvedType = state.savedQuestionResolve.resolvedType;
     } else {
       resolvedType = resolveQuestionMark();
-      state.savedQuestionResolve = { nodeId: node.id, resolvedType };
+      const eventId = resolvedType === 'event' ? rollQuestionEvent() : null;
+      state.savedQuestionResolve = { nodeId: node.id, resolvedType, eventId };
     }
   }
   saveRun();
@@ -836,6 +841,9 @@ async function onNodeClick(node) {
     case 'shiny':
       await doShinyNode(node);
       break;
+    case 'event':
+      await doEventNode(node, state.savedQuestionResolve?.eventId || rollQuestionEvent());
+      break;
     case 'mega':
       doItemNode(node);
       break;
@@ -849,12 +857,35 @@ async function onNodeClick(node) {
 
 function resolveQuestionMark() {
   const r = rng();
-  if (r < 0.22) return NODE_TYPES.BATTLE;
-  if (r < 0.42) return NODE_TYPES.TRAINER;
-  if (r < 0.52) return state.nuzlockeMode ? NODE_TYPES.BATTLE : NODE_TYPES.CATCH;
-  if (r < 0.65) return NODE_TYPES.ITEM;
-  if (r < (hasShinyCharm() ? 0.79 : 0.72)) return 'shiny';
-  return 'mega';
+  if (r < 0.12) return NODE_TYPES.BATTLE;
+  if (r < 0.24) return NODE_TYPES.TRAINER;
+  if (r < 0.32) return state.nuzlockeMode ? NODE_TYPES.BATTLE : NODE_TYPES.CATCH;
+  if (r < 0.40) return NODE_TYPES.ITEM;
+  if (r < (hasShinyCharm() ? 0.52 : 0.47)) return 'shiny';
+  if (r < 0.57) return 'mega';
+  return 'event'; // ~43-48% — the random-event pool below
+}
+
+// Weighted random-event table for ❓ nodes. Rolled once per node (persisted in
+// savedQuestionResolve.eventId) so refreshes replay the same event.
+const QUESTION_EVENTS = [
+  { id: 'fountain',     w: 12 },
+  { id: 'berry_bush',   w: 15 },
+  { id: 'rare_candy',   w: 9 },
+  { id: 'escape_rope',  w: 7,  skip: () => state.nuzlockeMode },
+  { id: 'free_tutor',   w: 10 },
+  { id: 'wounded_mon',  w: 11, skip: () => state.team.length >= 6 || state.nuzlockeMode },
+  { id: 'egg',          w: 9,  skip: () => state.nuzlockeMode || state.pendingEgg },
+  { id: 'thief',        w: 12 },
+  { id: 'mini_boss',    w: 11 },
+  { id: 'wonder_trade', w: 5,  skip: () => state.team.length < 2 || state.nuzlockeMode },
+];
+function rollQuestionEvent() {
+  const pool = QUESTION_EVENTS.filter(e => !(e.skip && e.skip()));
+  const total = pool.reduce((a, e) => a + e.w, 0);
+  let r = rng() * total;
+  for (const e of pool) { r -= e.w; if (r <= 0) return e.id; }
+  return pool[0].id;
 }
 
 // ---- Node Handlers ----
@@ -1364,7 +1395,7 @@ async function doCatchNode(node) {
     if (lvlFiltered.length > 0) {
       // Pad with ineligible choices if filtering drops below 3 so there are always 3 options
       choices = lvlFiltered.length < 3
-        ? [...lvlFiltered, ...choices.filter(sp => !lvlFiltered.includes(sp))].slice(0, 3)
+        ? [...lvlFiltered, ...choices.filter(sp => !lvlFiltered.includes(sp))].slice(0, hasPerk('catch_expert') ? 4 : 3)
         : lvlFiltered;
     }
 
@@ -1419,21 +1450,21 @@ async function doCatchNode(node) {
               !teamRoots.has(getEvoLineRoot(sp.id ?? sp.speciesId)) &&
               !choiceRoots.has(getEvoLineRoot(sp.id ?? sp.speciesId))
             );
-            choices = [...choices, ...extras].slice(0, 3);
+            choices = [...choices, ...extras].slice(0, hasPerk('catch_expert') ? 4 : 3);
           }
         }
       }
     }
-    const displayedIds = new Set(choices.slice(0, 3).map(sp => sp.id ?? sp.speciesId));
+    const displayedIds = new Set(choices.slice(0, hasPerk('catch_expert') ? 4 : 3).map(sp => sp.id ?? sp.speciesId));
     rerollPool = allCandidates.filter(sp => !displayedIds.has(sp.id ?? sp.speciesId));
     // Battle Tower: rerolls must also never surface an evolution line already
     // on the team — otherwise dedup only holds for the initial 3 choices.
     if (state.isEndlessMode) {
       rerollPool = rerollPool.filter(sp => !teamRoots.has(getEvoLineRoot(sp.id ?? sp.speciesId)));
     }
-    choices = choices.slice(0, 3);
+    choices = choices.slice(0, hasPerk('catch_expert') ? 4 : 3);
 
-    instances = choices.map(sp => createInstance(sp, sp._legendary ? level + 5 : level, rng() < (hasShinyCharm() ? 0.02 : 0.01), getMoveТierForMap(state.currentMap)));
+    instances = choices.map(sp => createInstance(sp, sp._legendary ? level + 5 : level, rng() < shinyRollOdds(), getMoveТierForMap(state.currentMap)));
 
     state.savedCatch = { nodeId: node.id, instances, rerollPool, level };
     saveRun();
@@ -1489,7 +1520,7 @@ async function doCatchNode(node) {
         // Remove picked from pool so subsequent rerolls can't get the same pokemon
         const pickIdx = rerollPool.indexOf(pick);
         if (pickIdx !== -1) rerollPool.splice(pickIdx, 1);
-        const newInst = createInstance(pick, level, rng() < (hasShinyCharm() ? 0.02 : 0.01), getMoveТierForMap(state.currentMap));
+        const newInst = createInstance(pick, level, rng() < shinyRollOdds(), getMoveТierForMap(state.currentMap));
         instances[slotIdx] = newInst;
         choicesEl.replaceChild(renderCatchSlot(newInst, slotIdx), choicesEl.children[slotIdx]);
       });
@@ -1736,7 +1767,7 @@ function doItemNode(node) {
     const j = Math.floor(rng() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  const picks = shuffled.slice(0, 3);
+  const picks = shuffled.slice(0, hasPerk('lucky_finder') ? 4 : 3);
 
   const el = document.getElementById('item-choices');
   el.innerHTML = '';
@@ -2033,12 +2064,338 @@ async function applyEvolution(pokemon) {
   saveRun();
 }
 
-function doPokeCenterNode(node) {
+async function doPokeCenterNode(node) {
   state.usedPokecenter = true;
   for (const p of state.team) p.currentHp = p.maxHp;
+  let msg = '🏥 Your team was fully healed!';
+  if (hasPerk('healer_heart')) {
+    applyLevelGain(state.team, [], new Set(state.team.map((_, i) => i)), 0, false, 2, getLevelCapForMap());
+    await checkAndEvolveTeam();
+    msg = "🏥 Fully healed — and the nurse's training granted +2 levels!";
+  }
   advanceFromNode(state.map, node.id);
   showMapScreen();
-  showMapNotification('🏥 Your team was fully healed!');
+  showMapNotification(msg);
+}
+
+// ---- ❓ Random events ----
+
+// Sync species instance from the static dex (era stats applied) — used by
+// events that add/replace team members outside the normal catch flow.
+function instanceFromStatic(id, level, shiny = false) {
+  const e = getStaticPokedexEntry(id);
+  if (!e) return null;
+  const inst = createInstance(
+    { id, name: e.name, types: e.types, baseStats: applyEraStats(id, e.baseStats) },
+    level, shiny, getMoveТierForMap(state.currentMap));
+  if (typeof loadBuffsIntoPokemon === 'function') loadBuffsIntoPokemon(inst);
+  return inst;
+}
+
+async function randomEventSpecies(count = 1) {
+  const picks = await getCatchChoices(getEncounterMapIndex(), Math.max(3, count),
+    getCatchGenRange().maxGenId, true, getCatchGenRange().minGenId);
+  return picks.slice(0, count);
+}
+
+// Villain-faction thief flavour per gen.
+function thiefFlavor() {
+  const g = getRunGen();
+  if (g === '3') return state.villainTeam === 'magma'
+    ? { name: 'Magma Thief', ids: [261, 322] } : { name: 'Aqua Thief', ids: [261, 318] };
+  if (g === '4') return { name: 'Galactic Thief', ids: [434, 431] };
+  if (g === '5') return { name: 'Plasma Thief', ids: [504, 509] };
+  if (g === '2') return { name: 'Rocket Thief', ids: [41, 109] };
+  return { name: 'Rocket Thief', ids: [41, 109] };
+}
+
+async function doEventNode(node, eventId) {
+  const done = msg => {
+    state.savedQuestionResolve = null;
+    advanceFromNode(state.map, node.id);
+    showMapScreen();
+    if (msg) showMapNotification(msg);
+  };
+  const level = Math.max(2, getLevelForNode(node) - 1);
+
+  switch (eventId) {
+    case 'fountain': {
+      for (const p of state.team) p.currentHp = p.maxHp;
+      renderTeamBar(state.team);
+      return done('⛲ A hidden spring fully restored your team!');
+    }
+    case 'berry_bush': {
+      for (const p of state.team) {
+        if (p.currentHp > 0) p.currentHp = Math.min(p.maxHp, p.currentHp + Math.floor(p.maxHp * 0.3));
+      }
+      renderTeamBar(state.team);
+      return done('🫐 You found a berry bush — everyone recovered some HP!');
+    }
+    case 'rare_candy': {
+      grantUsable('rare_candy');
+      renderItemBadges(state.items);
+      return done('🍬 You dug up a Rare Candy!');
+    }
+    case 'escape_rope': {
+      grantUsable('escape_rope');
+      renderItemBadges(state.items);
+      return done('🪢 You found an Escape Rope in the tall grass!');
+    }
+    case 'free_tutor': {
+      const cands = state.team.filter(p => getMovesForPokemon(p).some(m => !m.noDamage && (m.tier ?? 0) < 2));
+      if (!cands.length) { grantUsable('rare_candy'); renderItemBadges(state.items); return done('🎓 The wandering tutor had nothing to teach — took a Rare Candy instead!'); }
+      const p = cands.sort((a, b) => b.level - a.level)[0];
+      const mv = getMovesForPokemon(p).find(m => !m.noDamage && (m.tier ?? 0) < 2);
+      upgradeMoveTier(p, mv.type);
+      const learned = getMovesForPokemon(p).find(m => m.type === mv.type) || {};
+      return done(`🎓 A wandering tutor taught ${p.nickname || p.name} ${learned.name || 'a stronger move'}!`);
+    }
+    case 'wounded_mon': {
+      const [sp] = await randomEventSpecies(1);
+      if (!sp || state.team.length >= 6) return done('…the clearing was empty.');
+      const id = sp.id ?? sp.speciesId;
+      const inst = instanceFromStatic(id, Math.max(2, level - 1));
+      if (!inst) return done('…the clearing was empty.');
+      inst.currentHp = Math.max(1, Math.floor(inst.maxHp * 0.35));
+      markPokedexCaught(id, inst.name, inst.types, `sprites/pokemon/${id}.png`);
+      state.team.push(inst);
+      if (state.team.length > state.maxTeamSize) state.maxTeamSize = state.team.length;
+      renderTeamBar(state.team);
+      return done(`💕 A wounded ${inst.name} trusts you — it joined your team!`);
+    }
+    case 'egg': {
+      // justLaid: the egg node's own advance must not consume a tick.
+      state.pendingEgg = { hatchIn: 3, level, justLaid: true };
+      return done('🥚 You found a Pokémon egg! It rustles… (hatches in 3 nodes)');
+    }
+    case 'thief': {
+      const flavor = thiefFlavor();
+      // The thief grabs a random bag item before the fight (held-type only).
+      const stealable = state.items.map((it, i) => ({ it, i })).filter(x => !x.it.usable);
+      let stolen = null;
+      if (stealable.length) {
+        const pick = stealable[Math.floor(rng() * stealable.length)];
+        stolen = pick.it;
+        state.items.splice(pick.i, 1);
+        renderItemBadges(state.items);
+      }
+      const size = state.currentMap >= 3 ? 2 : 1;
+      const enemyTeam = flavor.ids.slice(0, size).map(id => {
+        const inst = instanceFromStatic(resolveEvoForLevel(id, level + 1), level + 1);
+        return inst;
+      }).filter(Boolean);
+      if (!enemyTeam.length) { if (stolen) state.items.push(stolen); return done(); }
+      showScreen('battle-screen');
+      document.getElementById('battle-title').textContent = `${flavor.name} attacks!`;
+      document.getElementById('battle-subtitle').textContent = stolen
+        ? `They snatched your ${stolen.name} — win it back!` : 'Chase them off!';
+      const won = await new Promise(resolve => {
+        runBattleScreen(enemyTeam, false, () => resolve(true), () => resolve(false), flavor.name, [], 2);
+      });
+      if (!won) { showGameOver(); return; }
+      let msg;
+      if (stolen) { state.items.push(stolen); msg = `👊 You recovered your ${stolen.name}`; }
+      else msg = '👊 You chased the thief off';
+      grantRandomHeldItem();
+      renderItemBadges(state.items);
+      return done(msg + ' — and they dropped their loot!');
+    }
+    case 'mini_boss': {
+      const [sp] = await randomEventSpecies(1);
+      if (!sp) return done();
+      const id = resolveEvoForLevel(sp.id ?? sp.speciesId, level + 4);
+      const boss = instanceFromStatic(id, level + 4);
+      if (!boss) return done();
+      boss.heldItem = { id: TYPE_ITEM_MAP[boss.types[0]] || 'scope_lens', name: 'Boost', icon: '💪' };
+      const fight = await showGbaDialog({
+        lines: [`A fearsome ${boss.name} (Lv${boss.level}) guards a treasure…`],
+        choices: [{ label: 'Fight it!', value: true }, { label: 'Back away', value: false }],
+      });
+      if (!fight) return done('You backed away quietly.');
+      showScreen('battle-screen');
+      document.getElementById('battle-title').textContent = `Alpha ${boss.name} blocks the path!`;
+      document.getElementById('battle-subtitle').textContent = 'Defeat it for a reward!';
+      const won = await new Promise(resolve => {
+        runBattleScreen([boss], false, () => resolve(true), () => resolve(false), null, [], 2);
+      });
+      if (!won) { showGameOver(); return; }
+      grantRandomHeldItem();
+      renderItemBadges(state.items);
+      return done('🏆 The alpha fell — its treasure is yours!');
+    }
+    case 'wonder_trade': {
+      const doIt = await showGbaDialog({
+        lines: ['A mysterious machine hums… It offers to trade ONE RANDOM team member for a surprise!'],
+        choices: [{ label: 'Trade! (random)', value: true }, { label: 'No thanks', value: false }],
+      });
+      if (!doIt) return done('You left the machine alone.');
+      const idx = Math.floor(rng() * state.team.length);
+      const out = state.team[idx];
+      if (out.heldItem) { state.items.push(out.heldItem); out.heldItem = null; }
+      const [sp] = await randomEventSpecies(1);
+      const id = sp ? (sp.id ?? sp.speciesId) : 129;
+      const inst = instanceFromStatic(resolveEvoForLevel(id, out.level), out.level, rng() < shinyRollOdds() * 3);
+      markPokedexCaught(inst.speciesId, inst.name, inst.types, `sprites/pokemon/${inst.speciesId}.png`);
+      state.team[idx] = inst;
+      renderTeamBar(state.team);
+      renderItemBadges(state.items);
+      return done(`🔄 ${out.nickname || out.name} left… and ${inst.name} arrived${inst.isShiny ? ' — SHINY!' : '!'}`);
+    }
+    default:
+      return done();
+  }
+}
+
+// Egg progress: ticks on every node advance; hatches into a random species
+// (or a Rare Candy if the team is full).
+async function tickEggProgress() {
+  if (!state.pendingEgg || state.isEndlessMode) return;
+  if (state.pendingEgg.justLaid) { delete state.pendingEgg.justLaid; return; }
+  state.pendingEgg.hatchIn--;
+  if (state.pendingEgg.hatchIn > 0) {
+    showMapNotification(`🥚 The egg rustles… (${state.pendingEgg.hatchIn} to go)`);
+    return;
+  }
+  const { level } = state.pendingEgg;
+  state.pendingEgg = null;
+  if (state.team.length >= 6) {
+    grantUsable('rare_candy');
+    renderItemBadges(state.items);
+    showMapNotification('🥚 The egg hatched, but your team is full — the hatchling left a Rare Candy!');
+    return;
+  }
+  const [sp] = await randomEventSpecies(1);
+  if (!sp) return;
+  const id = sp.id ?? sp.speciesId;
+  const inst = instanceFromStatic(id, Math.max(2, level - 1), rng() < shinyRollOdds() * 2);
+  if (!inst) return;
+  markPokedexCaught(id, inst.name, inst.types, `sprites/pokemon/${id}.png`);
+  state.team.push(inst);
+  if (state.team.length > state.maxTeamSize) state.maxTeamSize = state.team.length;
+  renderTeamBar(state.team);
+  showMapNotification(`🐣 The egg hatched into ${inst.isShiny ? 'a SHINY ' : ''}${inst.name}!`);
+}
+
+// ---- Route Perks (roguelike boons drafted after each badge) ----
+
+// Pool intentionally larger than the 8 drafts a run allows, so choices stay
+// meaningful to the end. Recurring perks re-trigger on every later badge;
+// instant perks apply once on pick.
+const ROUTE_PERKS = [
+  { id: 'lucky_finder', icon: '🎁', name: 'Treasure Eye',      desc: 'Item nodes offer 4 choices instead of 3' },
+  { id: 'catch_expert', icon: '🎯', name: "Ranger's Instinct", desc: 'Catch encounters offer 4 Pokémon instead of 3', excludeNuzlocke: true },
+  { id: 'trainer_xp',   icon: '📚', name: 'Battle Scholar',    desc: '+1 level for the whole team after trainer battles' },
+  { id: 'healer_heart', icon: '💖', name: "Nurse's Favor",     desc: 'Pokémon Centers also grant +2 levels (up to the cap)' },
+  { id: 'shiny_hunter', icon: '✨', name: 'Shine Seeker',      desc: 'Shiny odds are doubled' },
+  { id: 'trader',       icon: '🔁', name: 'Master Haggler',    desc: 'Trade nodes offer +5 levels instead of +3' },
+  { id: 'iron_will',    icon: '🛡️', name: 'Iron Will',         desc: 'Fainted Pokémon no longer earn less XP' },
+  { id: 'head_start',   icon: '🚀', name: 'Trailblazer',       desc: '+1 level for the whole team when entering a new map' },
+  { id: 'rope_stash',   icon: '🪢', name: 'Escape Artist',     desc: 'Gain an Escape Rope now and after every badge', excludeNuzlocke: true, recurring: true },
+  { id: 'deep_pockets', icon: '👜', name: 'Deep Pockets',      desc: 'Gain a random held item now and after every badge', recurring: true },
+  { id: 'candy_stash',  icon: '🍬', name: 'Sweet Tooth',       desc: 'Gain 2 Rare Candies right now', instant: true },
+  { id: 'tutor_pass',   icon: '🎓', name: 'Old Master',        desc: 'Your strongest Pokémon upgrades a move right now', instant: true },
+];
+
+function hasPerk(id) {
+  return !state.isEndlessMode && Array.isArray(state.perks) && state.perks.includes(id);
+}
+
+// Shiny odds in one place so the Shine Seeker perk applies everywhere.
+function shinyRollOdds() {
+  return (hasShinyCharm() ? 0.02 : 0.01) * (hasPerk('shiny_hunter') ? 2 : 1);
+}
+
+function grantUsable(id) {
+  const it = USABLE_ITEM_POOL.find(x => x.id === id);
+  if (it) state.items.push({ ...it });
+}
+
+function applyInstantPerk(id) {
+  if (id === 'candy_stash') { grantUsable('rare_candy'); grantUsable('rare_candy'); }
+  if (id === 'rope_stash') grantUsable('escape_rope');
+  if (id === 'deep_pockets') grantRandomHeldItem();
+  if (id === 'tutor_pass') {
+    const cands = state.team.filter(p => getMovesForPokemon(p).some(m => !m.noDamage && (m.tier ?? 0) < 2));
+    if (cands.length) {
+      const p = cands.sort((a, b) => b.level - a.level)[0];
+      const mv = getMovesForPokemon(p).find(m => !m.noDamage && (m.tier ?? 0) < 2);
+      if (mv) { upgradeMoveTier(p, mv.type); showMapNotification(`${p.nickname || p.name} mastered a stronger move!`); }
+    }
+  }
+}
+
+function grantRandomHeldItem() {
+  const owned = new Set([...state.items.filter(i => !i.usable).map(i => i.id),
+    ...state.team.filter(p => p.heldItem).map(p => p.heldItem.id)]);
+  const pool = ITEM_POOL.filter(i => !owned.has(i.id) && (i.minMap === undefined || state.currentMap >= i.minMap) && !i.gen2Only);
+  if (!pool.length) return;
+  const item = pool[Math.floor(rng() * pool.length)];
+  state.items.push({ ...item });
+  showMapNotification(`${item.icon} Found a ${item.name}!`);
+}
+
+// Recurring perks fire on every badge earned after they were picked.
+function applyPerBadgePerks() {
+  if (hasPerk('rope_stash')) grantUsable('escape_rope');
+  if (hasPerk('deep_pockets')) grantRandomHeldItem();
+}
+
+// Roll (and persist) 3 draft options, show the picker, apply the choice.
+// pendingPerkDraft survives refreshes so a mid-draft reload re-offers it.
+function showPerkDraft() {
+  return new Promise(resolve => {
+    if (state.isEndlessMode) { resolve(); return; }
+    if (!Array.isArray(state.perks)) state.perks = [];
+    if (!Array.isArray(state.pendingPerkDraft) || !state.pendingPerkDraft.length) {
+      const avail = ROUTE_PERKS.filter(p => !state.perks.includes(p.id) && !(state.nuzlockeMode && p.excludeNuzlocke));
+      for (let i = avail.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [avail[i], avail[j]] = [avail[j], avail[i]]; }
+      state.pendingPerkDraft = avail.slice(0, 3).map(p => p.id);
+      saveRun();
+    }
+    const offers = state.pendingPerkDraft.map(id => ROUTE_PERKS.find(p => p.id === id)).filter(Boolean);
+    if (!offers.length) { state.pendingPerkDraft = null; resolve(); return; }
+
+    document.getElementById('item-equip-modal')?.remove();
+    const modal = document.createElement('div');
+    modal.id = 'item-equip-modal';
+    modal.className = 'item-equip-overlay';
+    modal.innerHTML = `
+      <div class="item-equip-box">
+        <div class="equip-item-header">
+          <span class="equip-item-icon" style="font-size:28px;">🏅</span>
+          <div>
+            <div class="equip-item-name">Route Bonus</div>
+            <div class="equip-item-desc">Your victory earned you a boon — choose one for the rest of the run.</div>
+          </div>
+        </div>
+        <div class="equip-pokemon-list">
+          ${offers.map(p => `
+            <div class="equip-pokemon-row">
+              <span style="font-size:24px;width:34px;text-align:center;">${p.icon}</span>
+              <div class="equip-poke-info">
+                <div class="equip-poke-name">${p.name}</div>
+                <div class="equip-poke-lv">${p.desc}</div>
+              </div>
+              <div class="equip-btn-group"><button class="equip-btn" data-perk="${p.id}">Pick ▸</button></div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.querySelectorAll('button[data-perk]').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.perk;
+        state.perks.push(id);
+        state.pendingPerkDraft = null;
+        applyInstantPerk(id);
+        saveRun();
+        renderItemBadges(state.items);
+        modal.remove();
+        const perk = ROUTE_PERKS.find(p => p.id === id);
+        showMapNotification(`${perk.icon} ${perk.name} acquired!`);
+        resolve();
+      };
+    });
+  });
 }
 
 // ---- Trainer Battle Node ----
@@ -2294,7 +2651,7 @@ async function doLegendaryNode(node) {
   if (!species) { advanceFromNode(state.map, node.id); showMapScreen(); return; }
 
   const level = state.isEndlessMode ? getLevelForNode(node) + 5 : GEN_RUN_CONFIG[getRunGen()].levels()[state.currentMap][1];
-  const legendary = createInstance(species, level, rng() < (hasShinyCharm() ? 0.02 : 0.01), 2);
+  const legendary = createInstance(species, level, rng() < shinyRollOdds(), 2);
 
   const titleEl = document.getElementById('battle-title');
   const subEl = document.getElementById('battle-subtitle');
@@ -2462,8 +2819,8 @@ async function doTradeNode(node) {
       const choices = filtered.length > 0 ? filtered : pool;
       const species = choices[Math.floor(rng() * choices.length)];
       if (!species) { advanceFromNode(state.map, node.id); showMapScreen(); return; }
-      const offerLevel = Math.min(100, mine.level + 3);
-      const offer = createInstance(species, offerLevel, rng() < (hasShinyCharm() ? 0.02 : 0.01), Math.max(getMoveТierForMap(state.currentMap), mine.moveTier ?? 0));
+      const offerLevel = Math.min(100, mine.level + (hasPerk('trader') ? 5 : 3));
+      const offer = createInstance(species, offerLevel, rng() < shinyRollOdds(), Math.max(getMoveТierForMap(state.currentMap), mine.moveTier ?? 0));
       const released = state.team[idx];
       if (released.heldItem) state.items.push(released.heldItem);
       loadBuffsIntoPokemon(offer);
@@ -2943,12 +3300,7 @@ function showBadgeScreen(leader) {
   document.getElementById('badge-count-display').textContent = `Badges: ${state.badges}/8`;
   const badgeImg = document.getElementById('badge-icon-img');
   if (badgeImg) {
-    if (state.gen2Mode) {
-      // Johto sprites are at indices 9-16
-      badgeImg.src = `sprites/badges/${state.badges + 8}.png`;
-    } else {
-      badgeImg.src = `sprites/badges/${state.badges}.png`;
-    }
+    badgeImg.src = `sprites/badges/${state.badges + GEN_RUN_CONFIG[getRunGen()].badgeOffset}.png`;
   }
 
   const nextBtn = document.getElementById('btn-next-map');
@@ -2959,8 +3311,12 @@ function showBadgeScreen(leader) {
     e.preventDefault();
     advance();
   };
-  const advance = () => {
+  const advance = async () => {
     document.removeEventListener('keydown', onKey);
+    if (!state.isEndlessMode) {
+      applyPerBadgePerks();
+      await showPerkDraft();
+    }
     if (state.currentMap >= 7) {
       state.eliteIndex = 0;
       startMap(8);

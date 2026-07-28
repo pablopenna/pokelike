@@ -610,7 +610,10 @@ async function runBattle(playerTeam, enemyTeam, bagItems, enemyItems, onLog, tra
 }
 
 function getLevelGain(team, bagItems) {
-  return 2;
+  // Battle Scholar perk: +1 level from trainer battles (campaign only).
+  const scholar = typeof state !== 'undefined' && state && !state.isEndlessMode
+    && Array.isArray(state.perks) && state.perks.includes('trainer_xp');
+  return 2 + (scholar ? 1 : 0);
 }
 
 // Applies level gains and returns an array of level-up events for animation.
@@ -640,8 +643,11 @@ function applyLevelGain(team, bagItems, participantIdxs, maxEnemyLevel = 0, hard
       : 0;
     // Fainted members still progress but one level slower (min +1): keeping
     // your team alive earns a real edge, without the old death spiral.
+    // The Iron Will perk removes the penalty entirely.
+    const ironWill = typeof state !== 'undefined' && state
+      && Array.isArray(state.perks) && state.perks.includes('iron_will');
     const rawGain = baseGain + luckyBonus + catchUp;
-    const gain = p.currentHp > 0 ? rawGain : Math.max(1, rawGain - 1);
+    const gain = p.currentHp > 0 ? rawGain : Math.max(1, rawGain - (ironWill ? 0 : 1));
     const oldLevel = p.level;
     const newLevel = Math.min(oldLevel + gain, levelCap);
     if (newLevel <= oldLevel) continue; // already at/over cap — never demote

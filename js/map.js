@@ -252,6 +252,8 @@ function advanceFromNode(map, nodeId) {
   if (!node) return;
   node.visited = true;
   node.accessible = false;
+  // ❓-event egg: progresses one step per node cleared (game.js).
+  if (typeof tickEggProgress === 'function') tickEggProgress();
 
   // Lock sibling nodes in the same layer — the unchosen branches are gone
   for (const n of Object.values(map.nodes)) {

@@ -20,6 +20,16 @@ const POKELIKE_RULES = {
   objective:
     "Beat all 8 Gym Leaders across the maps, then defeat the Elite Four and the Champion on the final map.",
 
+  route_perks:
+    "After every gym badge you draft 1 of 3 Route Perks — run-long boons (extra item/catch choices, " +
+    "+1 trainer XP, Center level-ups, doubled shiny odds, better trades, no fainted-XP penalty, " +
+    "map-entry levels, recurring Escape Ropes / held items, instant candies / move upgrade). " +
+    "12-perk pool, 8 drafts per run, no repeats; some perks are excluded in Nuzlocke.",
+  question_events:
+    "❓ nodes now roll from a wide event pool besides classic outcomes: healing spring, berry bush, " +
+    "Rare Candy / Escape Rope finds, wandering move tutor, a wounded Pokémon that joins you, an egg " +
+    "that hatches after 3 nodes, a villain-team thief who steals a bag item (beat them to recover it " +
+    "plus loot), an optional Alpha mini-boss guarding treasure, and a risky Wonder Trade.",
   stats_model:
     "Base stats are era-accurate per generation (verified against Pokémon Showdown's per-gen data): " +
     "a Gen 1 run uses Gen 1 stats (unified Special), Gen 2-5 runs use that era's values (pre-Gen-6 buffs). " +
@@ -215,6 +225,9 @@ const _GUIDE_SECTIONS = [
       team, full heal after, and Nuzlocke-exempt.</li>
     </ul>
     <p>A per-map <b>level cap</b> equal to the leader's ace keeps you from out-leveling the challenge.</p>
+    <p>After each badge you <b>draft 1 of 3 Route Perks</b> — permanent boons for the run (better
+    item/catch offers, bonus XP, doubled shiny odds…). ❓ nodes hide a wide pool of <b>random
+    events</b>: springs, eggs, thieves, alpha mini-bosses, wonder trades and more.</p>
     <p>Stats are <b>era-accurate</b>: each generation plays with the base stats Pokémon had back then
     (Gen 1's unified Special, pre-modern values elsewhere), matching Pokémon Showdown's data.</p>` },
   { id: 'battle', icon: '⚔️', title: 'Battles', html: `
