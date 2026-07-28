@@ -2039,6 +2039,12 @@ function archetypeGenPool(key, range) {
       if (id >= range.minGenId) ids.add(id);
     }
   }
+  // Starved slice (e.g. Sinnoh Fire = only Magmortar once starter lines are
+  // out — the real D/P had this exact problem): widen with earlier-gen
+  // species of the same type, Platinum-style (Ponyta, Houndour, …).
+  if (ids.size < 3) {
+    for (const t of types) for (const id of getSpeciesIdsByType(t, range.maxGenId)) ids.add(id);
+  }
   return ids.size ? [...ids] : null;
 }
 

@@ -1349,8 +1349,9 @@ async function getCatchChoices(mapIndex, count = 3, maxGenId = 151, excludeStart
   const widenMode = isEndless ? 'endless' : ((isGen2 || isGen3) ? 'gen2' : 'none');
   const bucket = getBstBucket(range.min, widenMode);
 
-  const starterIds = excludeStarters ? (minGenId >= 494 ? GEN5_STARTER_IDS : minGenId >= 387 ? GEN4_STARTER_IDS : minGenId >= 252 ? GEN3_STARTER_IDS : minGenId >= 152 ? GEN2_STARTER_IDS : STARTER_IDS) : [];
-  const starterSet = new Set(starterIds);
+  // Exclude the FULL starter evolutionary lines (all gens): a catch node must
+  // never offer a Monferno any more than a Chimchar.
+  const starterSet = excludeStarters ? starterLineIds() : new Set();
   const larvitarLine = new Set([246, 247, 248]);
   // Gen 3's pseudo-legendary bases (Bagon/Beldum lines) get the same early-map
   // gate Larvitar has in Gen 2 — their low base BST lands them in map-1 buckets.
@@ -1768,13 +1769,30 @@ const GEN_RUN_CONFIG = {
          eliteTitle: 'Elite Four & Champion' },
 };
 
+// Every species id belonging to a STARTER evolutionary line (any gen) —
+// route trainers and catch pools must never field Monferno/Grovyle/etc.,
+// not just the base forms.
+let _starterLineIdSet = null;
+function starterLineIds() {
+  if (_starterLineIdSet) return _starterLineIdSet;
+  const s = new Set();
+  const walk = id => {
+    if (s.has(id)) return;
+    s.add(id);
+    if (EVOLUTIONS[id]) walk(EVOLUTIONS[id].into);
+    for (const b of (BRANCHING_EVOLUTIONS[id] || [])) walk(b.into);
+  };
+  for (const id of [...STARTER_IDS, ...GEN2_STARTER_IDS, ...GEN3_STARTER_IDS, ...GEN4_STARTER_IDS, ...GEN5_STARTER_IDS]) walk(id);
+  return (_starterLineIdSet = s);
+}
+
 // All non-legendary, non-starter species ids of a given type within a gen range.
 // Uses the in-memory static pokedex (loaded at boot) so it's synchronous.
 function getSpeciesIdsByType(type, maxGenId = 151) {
   const t = (type || '').toLowerCase();
   const ids = [];
   for (let id = 1; id <= maxGenId; id++) {
-    if (LEGENDARY_ID_SET.has(id) || STARTER_IDS.includes(id) || GEN2_STARTER_IDS.includes(id) || GEN3_STARTER_IDS.includes(id) || GEN4_STARTER_IDS.includes(id) || GEN5_STARTER_IDS.includes(id)) continue;
+    if (LEGENDARY_ID_SET.has(id) || starterLineIds().has(id)) continue;
     const types = getSpeciesTypes(id);
     if (types && types.some(x => x.toLowerCase() === t)) ids.push(id);
   }
