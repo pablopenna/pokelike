@@ -535,11 +535,17 @@ h1, h2, .pixel-font {
   pointer-events: none;
   z-index: 10;
 }
-.stat-lbl { font-family: 'Press Start 2P', monospace; font-size: 6px; color: var(--text-dim); width: 22px; text-align: left; flex-shrink: 0; }
-.stat-val { font-family: 'Press Start 2P', monospace; font-size: 6px; color: var(--text-dim); width: 20px; flex-shrink: 0; }
-.stat-bar-bg { flex: 1; height: 5px; background: var(--bg3); position: relative; }
+.stat-lbl { font-family: 'Press Start 2P', monospace; font-size: 8px; color: inherit; width: 30px; text-align: left; flex-shrink: 0; }
+.stat-val { font-family: 'Press Start 2P', monospace; font-size: 8px; color: inherit; width: 26px; text-align: right; flex-shrink: 0; }
+.stat-bar-bg { flex: 1; height: 7px; background: var(--bg3); position: relative; border-radius: 2px; overflow: hidden; }
 .stat-bar-fill { height: 100%; }
-.stat-hp, .stat-atk, .stat-def, .stat-spe, .stat-spa, .stat-spd { background: #888; }
+/* Per-stat colors (classic dex palette) — readable at a glance */
+.stat-hp  { background: #5cb85c; }
+.stat-atk { background: #e0703a; }
+.stat-def { background: #4a90d9; }
+.stat-spa { background: #b56ce0; }
+.stat-spd { background: #45bfa5; }
+.stat-spe { background: #d9b93f; }
 .stat-buff-overlay { position: absolute; top: 0; left: 0; height: 100%; background: #4488ff; pointer-events: none; }
 
 /* ---- Stat Buff Screen ---- */
@@ -835,12 +841,21 @@ h1, h2, .pixel-font {
   z-index: 500;
   pointer-events: none;
   display: none;
-  width: 200px;
+  /* Big and readable — this card is how you check your stats on the map */
+  width: min(300px, calc(100vw - 16px));
 }
 #team-hover-card .poke-card {
   margin: 0;
+  width: 100%;
   box-shadow: 0 4px 20px rgba(0,0,0,0.6);
 }
+#team-hover-card .poke-name  { font-size: 12px; }
+#team-hover-card .poke-level { font-size: 14px; }
+#team-hover-card .stat-lbl { font-size: 10px; width: 40px; }
+#team-hover-card .stat-val { font-size: 10px; width: 34px; }
+#team-hover-card .stat-bar-bg { height: 10px; }
+#team-hover-card .poke-stats-bars { gap: 5px; }
+#team-hover-card .move-name { font-size: 11px; }
 
 /* ---- Map Screen ---- */
 #map-screen { gap: 12px; }
@@ -3468,6 +3483,13 @@ body.dark-mode .btn-primary:disabled { box-shadow: 3px 3px 0 0 #000; }
 .poke-card.selected {
   border-color: var(--gold) !important;
   box-shadow: var(--shadow-pop), 0 0 0 2px rgba(255,215,0,0.55) !important;
+}
+/* Dark mode: pale card text needs dark glass under it, not frosted light */
+body.dark-mode .poke-card,
+body.dark-mode .trainer-card,
+body.dark-mode .item-card {
+  background: var(--glass-dark) !important;
+  border: 1px solid var(--glass-dark-border) !important;
 }
 
 /* ---- HUD panels ---- */
