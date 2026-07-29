@@ -3310,16 +3310,35 @@ body.dark-mode .btn-primary:disabled { box-shadow: 3px 3px 0 0 #000; }
 
   /* Items: icon-only horizontal strip; region panel: hidden on mobile */
   .map-panel-right { flex: 1 1 100%; padding: 2px 4px; min-width: 0; }
-  /* The map-header (and its badge row) is hidden on mobile — show badge
-     progress here instead: earned + grayed missing + the X/8 counter. */
+  /* The map-header (and its badge row) is hidden on mobile — badge progress
+     lives in a floating strip pinned to the BOTTOM of the screen instead,
+     freeing the top panels. It hides with the map screen (display:none
+     ancestors hide fixed children). */
   #badge-count-panel {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+    z-index: 60;
     display: grid;
     grid-template-columns: repeat(9, auto);
-    gap: 3px;
+    gap: 4px;
     align-items: center;
-    justify-content: start;
-    margin: 2px 0 4px;
+    padding: 4px 10px;
+    background: rgba(232, 228, 216, 0.93);
+    border: 2px solid #181410;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    white-space: nowrap;
   }
+  body.dark-mode #badge-count-panel {
+    background: rgba(37, 33, 24, 0.93);
+    border-color: #4a4438;
+  }
+  /* Battle Tower empties the panel — don't float an empty pill. */
+  #badge-count-panel:empty { display: none; }
+  /* Room so the last map layers can scroll clear of the strip. */
+  #map-container { margin-bottom: 42px; }
   .map-panel-right .hud-label { display: none; }
   #item-bar { display: flex; flex-direction: row; flex-wrap: wrap; gap: 4px; padding: 2px 0; }
   #item-bar .item-badge { font-size: 0; padding: 3px; line-height: 0; }
