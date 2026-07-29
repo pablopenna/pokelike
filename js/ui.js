@@ -859,19 +859,31 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
   const fx  = ELEMENT_FX[type] || ELEMENT_FX.normal;
   const rgb = TYPE_COLORS_RGB[type] || '200,200,200';
   const E   = TIER_FX[Math.max(0, Math.min(2, tier))] || TIER_FX[1];
-  // Signature moves override the type's generic motion so the animation
-  // matches the attack's NAME: Draco Meteor rains comets, Surf is a wave,
-  // Bubble streams bubbles, Blizzard is a storm... Everything else keeps
-  // its type's motion.
+  // Signature moves override the type's generic motion so every animation
+  // honors the attack's NAME, and spectacle scales with power (TIER_FX):
+  // tier 0 is modest, tier 2 is a show-stopper. Physical moves named after
+  // projectiles/phenomena (Twister, Icicle Crash...) route through the
+  // projectile pipeline instead of the melee dash.
+  const tierC = Math.max(0, Math.min(2, tier));
   const SIGNATURE_MOTIONS = {
-    'dragon:s:2': 'dracometeor', // Draco Meteor
-    'water:s:0':  'bubblestream',// Bubble
-    'water:s:1':  'wave',        // Surf
-    'ice:s:0':    'icywind',     // Icy Wind
-    'ice:s:1':    'icebeam',     // Ice Beam
-    'ice:s:2':    'blizzard',    // Blizzard
+    'dragon:s:0': 'dragonbreath', // Dragon Breath — scorching draconic cone
+    'dragon:s:1': 'dragonpulse',  // Dragon Pulse — traveling shockwave
+    'dragon:s:2': 'dracometeor',  // Draco Meteor — comets rain from the sky
+    'water:s:0':  'bubblestream', // Bubble
+    'water:s:1':  'wave',         // Surf — Hydro Pump keeps the pressure jet
+    'ice:s:0':    'icywind',      // Icy Wind
+    'ice:s:1':    'icebeam',      // Ice Beam
+    'ice:s:2':    'blizzard',     // Blizzard
+    'dragon:p:0': 'twister',      // Twister — a traveling tornado
+    'water:p:0':  'waterjet',     // Water Gun — a squirt of water, not a tackle
+    'ice:p:0':    'icywind',      // Powder Snow — blown powdery snow
+    'ice:p:2':    'iciclecrash',  // Icicle Crash — icicles fall from above
   };
-  const motion = (isSpecial && SIGNATURE_MOTIONS[`${type}:s:${Math.max(0, Math.min(2, tier))}`]) || fx.motion;
+  const sigMotion = SIGNATURE_MOTIONS[`${type}:${isSpecial ? 's' : 'p'}:${tierC}`];
+  const motion = sigMotion || fx.motion;
+  // Signature physical moves are projectiles/phenomena — they play the
+  // travel+impact pipeline rather than the melee dash.
+  const projectileLike = isSpecial || !!sigMotion;
   const dx = to.x - from.x, dy = to.y - from.y;
   const dist = Math.hypot(dx, dy) || 1;
   const nx = dx / dist, ny = dy / dist;
@@ -953,7 +965,8 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
     // gradient-heavy motions below zero it out entirely (their glow is baked
     // into the radial gradients already).
     ctx.shadowBlur = ['flamejet', 'waterjet', 'swarm', 'vines', 'spray',
-      'wave', 'bubblestream', 'icywind', 'icebeam', 'blizzard', 'dracometeor'].includes(motion) ? 0 : 10 * E.scale;
+      'wave', 'bubblestream', 'icywind', 'icebeam', 'blizzard', 'dracometeor',
+      'dragonbreath', 'dragonpulse', 'twister', 'iciclecrash'].includes(motion) ? 0 : 10 * E.scale;
     switch (motion) {
 
       case 'comet': { // normal/fighting: energy comet with flickering tongues
@@ -1056,6 +1069,120 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
           ctx.strokeStyle = `rgba(255,255,240,${0.95 - bIdx * 0.25})`; ctx.lineWidth = 4 * E.scale; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
           ctx.beginPath(); v.slice(0, upTo).forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)); ctx.stroke();
           ctx.strokeStyle = `rgba(${rgb},${0.7 - bIdx * 0.2})`; ctx.lineWidth = 9 * E.scale; ctx.stroke();
+        }
+        break;
+      }
+
+      case 'dragonbreath': { // DRAGON BREATH: a scorching cone of draconic energy
+        const front = Math.min(1, st * 1.3);
+        const puffs = Math.round(34 * E.count);
+        for (let k = 0; k < puffs; k++) {
+          const ft2 = ((k * 0.618 + st * 2.2) % 1) * front;
+          const spread = (5 + ft2 * 30) * E.scale;
+          const b = pathAt(ft2, jitter(k, spread));
+          const sz = (6 + ft2 * 16) * E.scale * (0.8 + 0.2 * Math.sin(st * 48 + k));
+          const g2 = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, sz);
+          g2.addColorStop(0, 'rgba(235,220,255,0.95)');
+          g2.addColorStop(0.45, `rgba(${rgb},0.8)`);
+          g2.addColorStop(1, 'rgba(40,10,120,0)');
+          ctx.beginPath(); ctx.arc(b.x, b.y, sz, 0, 6.283); ctx.fillStyle = g2; ctx.fill();
+        }
+        // roar arcs rippling out of the maw
+        const mang = Math.atan2(dy, dx);
+        for (let s2 = 0; s2 < 3; s2++) {
+          const rr = ((st * 2 + s2 * 0.33) % 1) * dist * front;
+          if (rr < 8) continue;
+          ctx.strokeStyle = `rgba(${rgb},${0.55 * (1 - rr / dist)})`; ctx.lineWidth = 3 * E.scale;
+          ctx.beginPath(); ctx.arc(from.x, from.y, rr, mang - 0.5, mang + 0.5); ctx.stroke();
+        }
+        glowDot(from.x + dx * 0.04, from.y + dy * 0.04, 10 * E.scale, '240,225,255', rgb, 0.95);
+        break;
+      }
+
+      case 'dragonpulse': { // DRAGON PULSE: a shockwave core trailing energy rings
+        const front = Math.min(1, st * 1.15);
+        const hd = pathAt(front);
+        // rings emitted along the flight path, expanding as they age
+        for (let k = 0; k < 5; k++) {
+          const born = k / 5 * front;
+          if (born > front) continue;
+          const age = Math.max(0, front - born);
+          const b = pathAt(born);
+          const rr = (6 + age * 90) * E.scale;
+          const a2 = Math.max(0, 0.7 - age * 1.4);
+          if (a2 <= 0) continue;
+          ctx.strokeStyle = `rgba(${rgb},${a2})`; ctx.lineWidth = 3.5 * E.scale;
+          ctx.beginPath(); ctx.arc(b.x, b.y, rr, 0, 6.283); ctx.stroke();
+        }
+        // pulsing core with a bright shell
+        const pulse = 1 + 0.25 * Math.sin(st * 34);
+        glowDot(hd.x, hd.y, 17 * E.scale * pulse, '235,225,255', rgb, 1);
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(hd.x, hd.y, 11 * E.scale * pulse, 0, 6.283); ctx.stroke();
+        tailStroke(front, 0.22, 8 * E.scale, 0.5);
+        break;
+      }
+
+      case 'twister': { // TWISTER: a spinning tornado grinds toward the victim
+        const front = Math.min(1, st * 1.1);
+        const b = pathAt(front);
+        const baseY = b.y + 30 * E.scale;
+        const layers = 7;
+        for (let l = 0; l < layers; l++) {
+          const lt = l / (layers - 1);
+          const w = (7 + lt * 26) * E.scale;
+          const y2 = baseY - lt * 62 * E.scale;
+          const sway = Math.sin(st * 26 - l * 0.9) * (3 + lt * 8) * E.scale;
+          ctx.strokeStyle = `rgba(${rgb},${0.9 - lt * 0.35})`;
+          ctx.lineWidth = 3.2 * E.scale; ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.ellipse(b.x + sway, y2, w, w * 0.32, 0, 0, 6.283);
+          ctx.stroke();
+        }
+        // debris flecks orbiting the funnel
+        for (let k = 0; k < Math.round(6 * E.count); k++) {
+          const oa = st * 22 + k * 1.05;
+          const lt = (k % 3) / 3 + 0.2;
+          glowDot(b.x + Math.cos(oa) * (10 + lt * 24) * E.scale, baseY - lt * 55 * E.scale + Math.sin(oa) * 4, 2.5 * E.scale, '230,225,255', rgb, 0.85);
+        }
+        break;
+      }
+
+      case 'iciclecrash': { // ICICLE CRASH: massive icicles drop and shatter
+        const N = 5;
+        for (let k = 0; k < N; k++) {
+          const t2 = (st - k * 0.11) / 0.42; if (t2 <= 0) continue;
+          const ex = to.x + (R[6 + k] - 0.5) * 90 * E.scale;
+          const ey = to.y + (R[14 + k] - 0.5) * 26 * E.scale;
+          const sy = -30;
+          const L = (26 + R[22 + k] * 14) * E.scale; // icicle length
+          if (t2 < 1) {
+            const iy = sy + (ey - sy) * t2;
+            // falling icicle: elongated crystal spike pointing down
+            ctx.save(); ctx.translate(ex, iy);
+            ctx.fillStyle = `rgba(${rgb},0.9)`;
+            ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            ctx.moveTo(0, L); ctx.lineTo(-6 * E.scale, -L * 0.4); ctx.lineTo(0, -L); ctx.lineTo(6 * E.scale, -L * 0.4);
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+            ctx.restore();
+            // speed streak above it
+            ctx.strokeStyle = `rgba(220,244,255,0.5)`; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(ex, iy - L - 26); ctx.lineTo(ex, iy - L - 6); ctx.stroke();
+          } else {
+            // shatter: shard burst + ring
+            const bt = Math.min(1, (t2 - 1) * 2.4), ba = 1 - bt;
+            ctx.strokeStyle = `rgba(255,255,255,${ba * 0.9})`; ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.arc(ex, ey, 6 + bt * 30 * E.scale, 0, 6.283); ctx.stroke();
+            for (let s2 = 0; s2 < 6; s2++) {
+              const a2 = s2 * 1.047 + R[30 + k] * 6.28;
+              const rr = (6 + bt * 26) * E.scale;
+              ctx.save(); ctx.translate(ex + Math.cos(a2) * rr, ey + Math.sin(a2) * rr); ctx.rotate(a2);
+              ctx.fillStyle = `rgba(${rgb},${ba})`;
+              ctx.beginPath(); ctx.moveTo(5 * E.scale, 0); ctx.lineTo(-3 * E.scale, -2.4 * E.scale); ctx.lineTo(-3 * E.scale, 2.4 * E.scale);
+              ctx.closePath(); ctx.fill(); ctx.restore();
+            }
+          }
         }
         break;
       }
@@ -1643,7 +1770,7 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
     ctx.restore();
   };
 
-  if (isSpecial) {
+  if (projectileLike) {
     const TRAVEL = 0.52;
     return runCanvas(canvas, ctx, Math.round(980 * E.dur), (c, t) => {
       if (t < TRAVEL) travel(t / TRAVEL);
