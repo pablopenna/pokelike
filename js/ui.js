@@ -418,7 +418,22 @@ function renderItemBadges(items, el, afterUse = null) {
     el.innerHTML = '<span style="color:var(--text-dim);font-size:10px;">Bag empty</span>';
     return;
   }
-  items.forEach((it, idx) => {
+  // Mega Stones collapse into ONE grouped chip (they'd otherwise flood the
+  // bag bar); clicking it opens the stone bag to pick one to assign.
+  const stoneEntries = [];
+  const restEntries = [];
+  items.forEach((it, idx) => ((it.id || '').startsWith('mega_stone_') ? stoneEntries : restEntries).push({ it, idx }));
+  if (stoneEntries.length) {
+    const chip = document.createElement('span');
+    chip.className = 'item-badge item-badge--stones';
+    chip.innerHTML = `<img src="sprites/items/key-stone.png" class="item-sprite-icon" style="width:18px;height:18px;image-rendering:pixelated;vertical-align:middle;" onerror="this.replaceWith(document.createTextNode('💠'))"> Mega Stones ×${stoneEntries.length}`;
+    chip.style.cursor = 'pointer';
+    chip.addEventListener('mousemove', e => { if (_hoverEnabled) _itemTooltip.show('Your Mega Stone collection — tap to assign one to its Pokémon.', e.clientX, e.clientY); });
+    chip.addEventListener('mouseleave', () => _itemTooltip.hide());
+    chip.addEventListener('click', () => openMegaStoneBag(stoneEntries, afterUse));
+    el.appendChild(chip);
+  }
+  restEntries.forEach(({ it, idx }) => {
     const span = document.createElement('span');
     span.className = 'item-badge';
     span.innerHTML = `${itemIconHtml(it, 18)} ${it.name}`;
@@ -442,6 +457,59 @@ function renderItemBadges(items, el, afterUse = null) {
     });
 
     el.appendChild(span);
+  });
+}
+
+// The grouped Mega Stone bag: list every stone with its real sprite and
+// whether its Pokémon is on the team, then hand off to the equip modal.
+function openMegaStoneBag(stoneEntries, afterUse = null) {
+  document.getElementById('item-equip-modal')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'item-equip-modal';
+  modal.className = 'item-equip-overlay';
+  const rows = stoneEntries.map(({ it, idx }) => {
+    const m = (typeof MEGA_FORMS !== 'undefined' && MEGA_FORMS[it.megaBaseId]) || null;
+    const holderOnTeam = m && state.team.some(p =>
+      typeof getEvoLineRoot === 'function' && getEvoLineRoot(p.speciesId) === getEvoLineRoot(it.megaBaseId));
+    return `<div class="equip-pokemon-row" style="${holderOnTeam ? '' : 'opacity:0.55;'}">
+      ${itemIconHtml(it, 26)}
+      <div class="equip-poke-info">
+        <div class="equip-poke-name">${it.name}</div>
+        <div class="equip-poke-lv">${m ? `Mega ${m.megaName}` : ''}${holderOnTeam ? '' : ' — line not on team'}</div>
+      </div>
+      <div class="equip-btn-group"><button class="equip-btn" data-stone="${idx}">Assign ▸</button></div>
+    </div>`;
+  }).join('');
+  modal.innerHTML = `
+    <div class="item-equip-box">
+      <div class="equip-item-header">
+        <img src="sprites/items/key-stone.png" style="width:28px;height:28px;image-rendering:pixelated;" onerror="this.replaceWith(document.createTextNode('💠'))">
+        <div>
+          <div class="equip-item-name">Mega Stones</div>
+          <div class="equip-item-desc">Give a stone to its Pokémon to Mega Evolve it. Remove it to revert.</div>
+        </div>
+      </div>
+      <div class="equip-pokemon-list">${rows}</div>
+      <button id="btn-close-stone-bag" class="btn-secondary" style="width:100%;margin-top:8px;">Close</button>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.querySelector('#btn-close-stone-bag').onclick = () => modal.remove();
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  modal.querySelectorAll('button[data-stone]').forEach(btn => {
+    btn.onclick = () => {
+      const idx = +btn.dataset.stone;
+      const it = state.items[idx];
+      modal.remove();
+      if (!it) return;
+      openItemEquipModal(it, {
+        fromBagIdx: idx,
+        onComplete: () => {
+          renderItemBadges(state.items);
+          renderTeamBar(state.team);
+          if (afterUse) afterUse();
+        },
+      });
+    };
   });
 }
 

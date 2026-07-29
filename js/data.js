@@ -2788,14 +2788,30 @@ const MEGA_FORMS = {
   376:  { megaId: 10076, megaName: "Metagross", types: ["Steel","Psychic"], baseStats: { hp:80, atk:145, def:150, speed:110, special:105, spdef:110 } },
 };
 
+// Canonical PokeAPI sprite slugs for each stone (bundled locally).
+const MEGA_STONE_SLUGS = {
+  Venusaur: 'venusaurite', Charizard: 'charizardite-x', Blastoise: 'blastoisinite',
+  Alakazam: 'alakazite', Gengar: 'gengarite', Kangaskhan: 'kangaskhanite',
+  Pinsir: 'pinsirite', Gyarados: 'gyaradosite', Aerodactyl: 'aerodactylite',
+  Ampharos: 'ampharosite', Scizor: 'scizorite', Heracross: 'heracronite',
+  Houndoom: 'houndoominite', Tyranitar: 'tyranitarite', Sceptile: 'sceptilite',
+  Blaziken: 'blazikenite', Swampert: 'swampertite', Gardevoir: 'gardevoirite',
+  Sableye: 'sablenite', Mawile: 'mawilite', Aggron: 'aggronite',
+  Medicham: 'medichamite', Manectric: 'manectite', Sharpedo: 'sharpedonite',
+  Camerupt: 'cameruptite', Altaria: 'altarianite', Banette: 'banettite',
+  Absol: 'absolite', Glalie: 'glalitite', Salamence: 'salamencite', Metagross: 'metagrossite',
+};
+
 function megaStoneItem(baseId) {
   const m = MEGA_FORMS[baseId];
   if (!m) return null;
   return {
     id: 'mega_stone_' + baseId,
     megaBaseId: Number(baseId),
-    name: m.megaName + 'ite',
+    name: (MEGA_STONE_SLUGS[m.megaName] || (m.megaName.toLowerCase() + 'ite'))
+      .split('-').map(w => w === 'x' ? 'X' : w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
     icon: '💠',
+    iconUrl: `sprites/items/${MEGA_STONE_SLUGS[m.megaName] || 'key-stone'}.png`,
     desc: `Mega Stone — while ${m.megaName} holds it, it becomes Mega ${m.megaName}. Remove it to revert.`,
   };
 }
