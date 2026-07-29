@@ -964,10 +964,14 @@ function getNodeLabel(node) {
       : (typeof GYM_LEADERS !== 'undefined' ? GYM_LEADERS : null);
     if (leaders && mi >= 0 && mi < leaders.length) {
       const leader = leaders[mi];
-      const teamHtml = leader.team.map(p =>
-        `<div style="color:#ccc;font-size:9px;">${p.name} <span style="color:#aaa;">Lv${p.level}</span></div>`
-      ).join('');
-      return `<div style="font-weight:bold;margin-bottom:4px;">${leader.name} — ${leader.type} Gym</div>${teamHtml}`;
+      const teamHtml = leader.team.map(p => `
+        <div class="tt-poke-row">
+          <img class="tt-poke-sprite" src="sprites/pokemon/${p.speciesId}.png" onerror="this.style.visibility='hidden'">
+          <span class="tt-poke-name">${p.name}</span>
+          ${p.heldItem && typeof itemIconHtml === 'function' ? `<span class="tt-poke-item">${itemIconHtml(p.heldItem, 16)}</span>` : ''}
+          <span class="tt-poke-lv">Lv${p.level}</span>
+        </div>`).join('');
+      return `<div class="tt-title">${leader.name} — ${leader.type} Gym</div><div class="tt-team">${teamHtml}</div>`;
     }
     if (_lblGen === '4' && mi === 8) return '<div style="font-weight:bold;">Elite Four &amp; Cynthia</div>';
     if (_lblGen === '5' && mi === 8) return '<div style="font-weight:bold;">Elite Four &amp; Alder</div>';
@@ -988,9 +992,8 @@ function getNodeLabel(node) {
     [NODE_TYPES.QUESTION]:   'Random Event',
     [NODE_TYPES.POKECENTER]: 'Pokemon Center',
     [NODE_TYPES.TRAINER]:    (node.trainerSprite && TRAINER_SPRITE_NAMES[node.trainerSprite])
-      ? (isGen2Mode
-          ? `${TRAINER_SPRITE_NAMES[node.trainerSprite]} — +2 Levels — ${TRAINER_SPECIALTIES_GEN2[node.trainerSprite] || TRAINER_SPECIALTIES[node.trainerSprite] || 'Various Pokemon'}`
-          : `${TRAINER_SPRITE_NAMES[node.trainerSprite]} — +2 Levels — ${TRAINER_SPECIALTIES[node.trainerSprite] || 'Various Pokemon'}`)
+      ? `<div class="tt-title">${TRAINER_SPRITE_NAMES[node.trainerSprite]}</div>` +
+        `<div class="tt-sub">+2 Levels — ${(isGen2Mode && TRAINER_SPECIALTIES_GEN2[node.trainerSprite]) || TRAINER_SPECIALTIES[node.trainerSprite] || 'Various Pokemon'}</div>`
       : 'Trainer Battle — +2 Levels',
     [NODE_TYPES.LEGENDARY]:  'Legendary Pokemon',
     [NODE_TYPES.MOVE_TUTOR]: 'Move Tutor',

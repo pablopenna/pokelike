@@ -781,13 +781,22 @@ h1, h2, .pixel-font {
   line-height: 1.9;
   padding: 8px 12px;
   white-space: normal;
-  max-width: 200px;
+  max-width: 250px;
   z-index: 200;
   opacity: 0;
   transition: opacity 0.1s;
   transform: translate(-50%, calc(-100% - 12px));
 }
 #map-node-tooltip.visible { opacity: 1; }
+/* Structured node tooltip content (trainers / gym leaders) */
+#map-node-tooltip .tt-title { font-weight: bold; font-size: 10px; color: #ffd76b; margin-bottom: 5px; line-height: 1.5; }
+#map-node-tooltip .tt-sub { font-size: 9px; color: #d8d4c8; line-height: 1.7; }
+#map-node-tooltip .tt-team { display: flex; flex-direction: column; gap: 3px; }
+#map-node-tooltip .tt-poke-row { display: flex; align-items: center; gap: 6px; }
+#map-node-tooltip .tt-poke-sprite { width: 30px; height: 30px; image-rendering: pixelated; flex-shrink: 0; }
+#map-node-tooltip .tt-poke-name { flex: 1; font-size: 9px; color: #f0ece0; line-height: 1.3; }
+#map-node-tooltip .tt-poke-item { flex-shrink: 0; line-height: 0; }
+#map-node-tooltip .tt-poke-lv { font-size: 9px; color: #ffd76b; flex-shrink: 0; }
 
 /* ---- Tutorial overlay ---- */
 #tutorial-overlay {
@@ -4221,6 +4230,14 @@ body.dark-mode .region-card { filter: brightness(0.93); }
 #map-node-tooltip.docked div[style*="color:#ffd76b"] { color: #8a6410 !important; }
 #map-node-tooltip.docked div[style*="color:#7ecf7e"] { color: #2e7a3e !important; }
 #map-node-tooltip.docked span { color: var(--gba-ink-dim) !important; }
+/* Docked (mobile) structured tooltip: bigger everything */
+#map-node-tooltip.docked .tt-title { font-size: 12px !important; color: #8a6410 !important; margin-bottom: 8px; }
+#map-node-tooltip.docked .tt-sub { font-size: 11px !important; color: var(--gba-ink) !important; }
+#map-node-tooltip.docked .tt-team { gap: 6px; }
+#map-node-tooltip.docked .tt-poke-sprite { width: 38px; height: 38px; }
+#map-node-tooltip.docked .tt-poke-name { font-size: 11px !important; color: var(--gba-ink) !important; }
+#map-node-tooltip.docked .tt-poke-lv { font-size: 11px !important; color: #8a6410 !important; }
+#map-node-tooltip.docked .tt-poke-item img { width: 20px !important; height: 20px !important; }
 
 /* ===== Modern hit banners: fixed overlay over the struck Pokémon ===== */
 .hit-banner {
