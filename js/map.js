@@ -824,7 +824,10 @@ function renderMap(map, container, onNodeClick) {
     // Prevent native long-press image menu on mobile
     g.addEventListener('contextmenu', e => e.preventDefault());
 
-    // Touch: long press shows tooltip, short tap enters node
+    // Touch: long press shows the docked info sheet, short tap enters node.
+    // The sheet STAYS OPEN after lifting the finger (it was hidden on
+    // touchend, forcing you to read it under your own hand) — it closes on
+    // tapping anywhere outside a node (document handler above).
     let _lpTimer = null;
     let _lpFired = false;
     g.addEventListener('touchstart', e => {
@@ -832,8 +835,8 @@ function renderMap(map, container, onNodeClick) {
       const touch = e.touches[0];
       _lpTimer = setTimeout(() => {
         _lpFired = true;
-        _mapTooltip.show(label, touch.clientX, touch.clientY);
-      }, 400);
+        _mapTooltip.show(hoverLabel, touch.clientX, touch.clientY);
+      }, 350);
     }, { passive: true });
     g.addEventListener('touchmove', () => {
       clearTimeout(_lpTimer);
@@ -841,11 +844,7 @@ function renderMap(map, container, onNodeClick) {
     }, { passive: true });
     g.addEventListener('touchend', e => {
       clearTimeout(_lpTimer);
-      if (_lpFired) {
-        _mapTooltip.hide();
-      } else if (isClickable) {
-        onNodeClick(node);
-      }
+      if (!_lpFired && isClickable) onNodeClick(node);
       e.preventDefault();
     });
 
