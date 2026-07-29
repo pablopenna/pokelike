@@ -580,9 +580,12 @@ h1, h2, .pixel-font {
   flex-wrap: wrap;
   justify-content: center;
 }
-/* One row per available move (name left, type + power right) */
-.poke-move-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; }
-.poke-move-row-meta { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+/* One row per available move (name left, type + power right). Wraps on
+   narrow cards: the meta drops below the name instead of overflowing. */
+.poke-move-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 3px 6px; width: 100%; }
+.poke-move-row .move-name { min-width: 0; line-height: 1.6; text-align: left; }
+.poke-move-row-meta { display: flex; align-items: center; gap: 4px; flex-shrink: 0; margin-left: auto; }
+.poke-move-row + .poke-move-row { border-top: 1px solid rgba(128,128,128,0.25); padding-top: 3px; }
 .move-name {
   font-size: 9px;
   color: var(--text);
