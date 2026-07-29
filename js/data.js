@@ -1650,7 +1650,7 @@ const GEN4_ELITE_4 = [
   },
   { name: 'Lucian', title: 'Elite Four', type: 'Psychic',
     team: [
-      { speciesId: 122, name: 'Mr-mime', types: ['Psychic','Fairy'], baseStats: { hp:40, atk:45, def:65, speed:90, special:100, spdef:120 }, level: 87, heldItem: { id: 'focus_sash', name: 'Focus Sash', icon: '🎗️' } },
+      { speciesId: 122, name: 'Mr. Mime', types: ['Psychic','Fairy'], baseStats: { hp:40, atk:45, def:65, speed:90, special:100, spdef:120 }, level: 87, heldItem: { id: 'focus_sash', name: 'Focus Sash', icon: '🎗️' } },
       { speciesId: 196, name: 'Espeon', types: ['Psychic'], baseStats: { hp:65, atk:65, def:60, speed:110, special:130, spdef:95 }, level: 88, heldItem: { id: 'leftovers', name: 'Leftovers', icon: '🍃' } },
       { speciesId: 437, name: 'Bronzong', types: ['Steel','Psychic'], baseStats: { hp:67, atk:89, def:116, speed:33, special:79, spdef:116 }, level: 88, heldItem: { id: 'metal_coat', name: 'Metal Coat', icon: '🥈' } },
       { speciesId: 65, name: 'Alakazam', types: ['Psychic'], baseStats: { hp:55, atk:50, def:45, speed:120, special:135, spdef:95 }, level: 89, heldItem: { id: 'twisted_spoon', name: 'Twisted Spoon', icon: '🥄' } },
@@ -1786,7 +1786,7 @@ const GEN5_ELITE_4 = [
       { speciesId: 563, name: 'Cofagrigus', types: ['Ghost'], baseStats: { hp:58, atk:50, def:145, speed:30, special:95, spdef:105 }, level: 84, heldItem: { id: 'rocky_helmet', name: 'Rocky Helmet', icon: '⛑️' } },
       { speciesId: 426, name: 'Drifblim', types: ['Ghost','Flying'], baseStats: { hp:150, atk:80, def:44, speed:80, special:90, spdef:54 }, level: 85, heldItem: { id: 'leftovers', name: 'Leftovers', icon: '🍃' } },
       { speciesId: 623, name: 'Golurk', types: ['Ground','Ghost'], baseStats: { hp:89, atk:124, def:80, speed:55, special:55, spdef:80 }, level: 85, heldItem: { id: 'hard_stone', name: 'Hard Stone', icon: '🪨' } },
-      { speciesId: 593, name: 'Jellicent-male', types: ['Water','Ghost'], baseStats: { hp:100, atk:60, def:70, speed:60, special:85, spdef:105 }, level: 86, heldItem: { id: 'mystic_water', name: 'Mystic Water', icon: '💧' } },
+      { speciesId: 593, name: 'Jellicent', types: ['Water','Ghost'], baseStats: { hp:100, atk:60, def:70, speed:60, special:85, spdef:105 }, level: 86, heldItem: { id: 'mystic_water', name: 'Mystic Water', icon: '💧' } },
       { speciesId: 478, name: 'Froslass', types: ['Ice','Ghost'], baseStats: { hp:70, atk:80, def:70, speed:110, special:80, spdef:70 }, level: 86, heldItem: { id: 'focus_sash', name: 'Focus Sash', icon: '🎗️' } },
       { speciesId: 609, name: 'Chandelure', types: ['Ghost','Fire'], baseStats: { hp:60, atk:55, def:90, speed:80, special:145, spdef:90 }, level: 87, heldItem: { id: 'spell_tag', name: 'Spell Tag', icon: '🏷️' } },
     ]

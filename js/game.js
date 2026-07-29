@@ -1293,8 +1293,8 @@ function showElitePrepScreen({ title, subtitle, nextBoss }) {
     const enemyEl = document.getElementById('elite-prep-enemy-team');
     enemyEl.innerHTML = nextBoss.team.map(p => {
       const sprite = `sprites/pokemon/${p.speciesId}.png`;
-      const types  = (p.types || []).map(t => `<span class="type-badge type-${t.toLowerCase()}" style="font-size:5px;padding:1px 2px;">${t}</span>`).join('');
-      const item   = p.heldItem ? `<div style="font-size:7px;color:var(--text-dim);margin-top:2px;">${itemIconHtml(p.heldItem, 12)}</div>` : '';
+      const types  = (p.types || []).map(t => `<span class="type-badge type-${t.toLowerCase()}">${t}</span>`).join('');
+      const item   = p.heldItem ? `<div class="held">${itemIconHtml(p.heldItem, 18)}<span class="held-name">${p.heldItem.name}</span></div>` : '';
       return `<div class="elite-prep-enemy-slot">
         <img src="${sprite}" alt="${p.name}" onerror="this.style.display='none'">
         <div class="name">${p.name}</div>
