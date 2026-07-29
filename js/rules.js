@@ -80,7 +80,7 @@ const POKELIKE_RULES = {
       "There are ~11 content layers per map plus a guaranteed Gym Leader (BOSS) at the end.",
     node_types: {
       START: "Your entry point.",
-      BATTLE: "Wild Pokémon battle. +1 level on win.",
+      BATTLE: "Wild Pokémon battle. Gives NO experience — XP comes from trainers, rivals and leaders.",
       TRAINER: "Trainer battle. +2 levels on win.",
       BOSS: "Gym Leader (or, on the last map, the Elite Four + Champion). +3 levels on win.",
       CATCH: "Catch a wild Pokémon to add to your team/box.",
@@ -90,7 +90,7 @@ const POKELIKE_RULES = {
       LEGENDARY: "Legendary Pokémon encounter.",
       MOVE_TUTOR: "Teach/upgrade moves. At least 2 Move Tutor nodes are guaranteed per map.",
       TRADE: "Swap a Pokémon for one 3 levels higher.",
-      SILVER: "Rival battle — Silver in Gen II, a Team Aqua/Magma ambush in Gen III. Double XP, full heal after, Nuzlocke-exempt.",
+      SILVER: "Rival battle — Silver in Gen II, a Team Aqua/Magma ambush in Gen III. +3 levels, full heal after, Nuzlocke-exempt.",
     },
   },
 
@@ -107,11 +107,11 @@ const POKELIKE_RULES = {
       "show a ×0 tag). The AI picks its strongest move that affects the target; a Pokémon with NO move " +
       "that affects the target resorts to typeless Struggle (50 power) so auto battles can't deadlock.",
     auto: "An Auto button lets the AI play your turns.",
-    xp_rewards: { wild: 1, trainer: 2, gym: 3 },
+    xp_rewards: { wild: 0, trainer: 2, rival: 3, gym: 3, elite: 3 },
     xp_note:
       "The WHOLE team shares XP; fainted members earn one level less (min +1), so nobody falls behind " +
       "but staying alive pays. A dynamic per-map level cap prevents over-leveling so bosses stay a threat. " +
-      "Route levels climb across the map's band (late maps reach near the cap), with wild/catch/trainer fights running a notch below the route level on early maps. Pokémon clearly below the enemies they beat gain extra catch-up XP.",
+      "Wild battles give NO experience — they are pure risk (and catch opportunities). Only trainer fights (+2), the rival (+3) and gym/Elite bosses (+3) level the team; a Pokémon clearly below the enemies it beats gains extra catch-up XP on those fights. The level cap is the map's strongest boss level.",
   },
 
   bosses: {
@@ -248,7 +248,7 @@ const _GUIDE_SECTIONS = [
     </ul>` },
   { id: 'team', icon: '📈', title: 'Team & XP', html: `
     <ul>
-      <li><b>The whole team shares XP</b> — wild +1, trainer +2, gym +3, rival +4, capped at the map's
+      <li><b>The whole team shares XP</b> — wild battles give <b>none</b>; trainers +2, rival +3, gym/Elite +3, capped at the map's
       level cap. Fainted Pokémon still earn XP but one level less (min +1): nobody falls behind, but
       keeping your team alive pays.</li>
       <li>Fainted Pokémon revive automatically when you reach the next map; mid-map use a Pokémon Center,

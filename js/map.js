@@ -1058,7 +1058,7 @@ function getNodeIcon(node) {
 
 function getSilverHoverLabel() {
   if (typeof SILVER_ENCOUNTERS === 'undefined') {
-    return 'Rival Silver — Double XP';
+    return 'Rival Silver — +3 Levels';
   }
   // Encounter scales to the current map slot, not the win count, so skipping
   // earlier Silver fights doesn't trivialize a later one.
@@ -1093,7 +1093,7 @@ function getSilverHoverLabel() {
     : '';
   const title = isVillainLbl ? data.leader : 'Rival Silver';
   return `<div style="font-weight:bold;margin-bottom:2px;">${title}</div>` +
-         `<div style="color:#ffd76b;font-size:9px;">+4 Levels (Double XP)</div>` +
+         `<div style="color:#ffd76b;font-size:9px;">+3 Levels for the whole team</div>` +
          `<div style="color:#7ecf7e;font-size:9px;margin-bottom:4px;">Heals you after battle</div>` +
          noPermaDeath +
          teamHtml;
@@ -1138,7 +1138,7 @@ function getNodeLabel(node) {
     (state.gen2Mode || (typeof getRunGen === 'function' && ['3', '4', '5'].includes(getRunGen())));
   const labels = {
     [NODE_TYPES.START]:      'Start',
-    [NODE_TYPES.BATTLE]:     'Wild Battle — +1 level',
+    [NODE_TYPES.BATTLE]:     'Wild Battle — no XP',
     [NODE_TYPES.CATCH]:      'Catch Pokemon',
     [NODE_TYPES.ITEM]:       'Item',
     [NODE_TYPES.QUESTION]:   'Random Event',

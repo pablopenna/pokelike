@@ -1079,7 +1079,7 @@ async function doBattleNode(node) {
   if (titleEl) titleEl.textContent = `Wild ${enemy.name} appeared!`;
   if (subEl) subEl.textContent = `Level ${enemy.level}`;
   const won = await new Promise(resolve => {
-    runBattleScreen([enemy], false, () => resolve(true), () => resolve(false), null, [], 1);
+    runBattleScreen([enemy], false, () => resolve(true), () => resolve(false), null, [], 0);
   });
   if (!won) { showGameOver(); return; }
   if (state.isEndlessMode) await applyEndlessBugTrait();
@@ -1198,7 +1198,7 @@ async function doBothElite4() {
     document.getElementById('battle-title').textContent = `${member.title}: ${member.name}!`;
     document.getElementById('battle-subtitle').textContent = i === lineup.length - 1 ? 'Final Battle!' : `Elite Four — Battle ${i + 1}/${lineup.length - 1}`;
     const won = await new Promise(resolve => {
-      runBattleScreen(enemyTeam, true, () => resolve(true), () => resolve(false), member.name);
+      runBattleScreen(enemyTeam, true, () => resolve(true), () => resolve(false), member.name, [], 3);
     });
     if (!won) { showGameOver(); return; }
   }
@@ -1275,9 +1275,9 @@ async function doSilverNode(node) {
       : (encounterIdx === 3 ? VILLAIN_SPRITES[state.villainTeam || 'aqua'].leader
                             : VILLAIN_SPRITES[state.villainTeam || 'aqua'].admin);
   const won = await new Promise(resolve => {
-    // Rival battles give +4 base (Double XP), to every team member regardless
-    // of whether they participated or fainted. Lucky egg etc. still apply.
-    runBattleScreen(enemyTeam, true, () => resolve(true), () => resolve(false), enemyToken, [], 4, null, null, true);
+    // Rival battles give +3 base, to every team member regardless of whether
+    // they participated or fainted. Lucky egg etc. still apply.
+    runBattleScreen(enemyTeam, true, () => resolve(true), () => resolve(false), enemyToken, [], 3, null, null, true);
   });
   if (!won) { showGameOver(); return; }
   // Full heal after the rival battle.
@@ -1354,7 +1354,7 @@ async function doEliteGauntlet(bosses, maxGenId, winAchievementId = null) {
     document.getElementById('battle-subtitle').textContent =
       i < bosses.length - 1 ? `Elite Four — Battle ${i + 1}/${bosses.length - 1}` : 'Final Battle!';
     const won = await new Promise(resolve => {
-      runBattleScreen(enemyTeam, true, () => resolve(true), () => resolve(false), boss.name);
+      runBattleScreen(enemyTeam, true, () => resolve(true), () => resolve(false), boss.name, [], 3);
     });
     if (!won) { showGameOver(); return; }
   }
@@ -2218,7 +2218,7 @@ async function doEventNode(node, eventId) {
       document.getElementById('battle-title').textContent = `Alpha ${boss.name} blocks the path!`;
       document.getElementById('battle-subtitle').textContent = 'Defeat it for a reward!';
       const won = await new Promise(resolve => {
-        runBattleScreen([boss], false, () => resolve(true), () => resolve(false), null, [], 2);
+        runBattleScreen([boss], false, () => resolve(true), () => resolve(false), null, [], 0);
       });
       if (!won) { showGameOver(); return; }
       grantRandomHeldItem();
@@ -3198,7 +3198,11 @@ function runBattleScreen(enemyTeam, isBoss, onWin, onLose, enemyName = null, ene
       const effectiveParticipants = forceAllParticipants
         ? new Set(state.team.map((_, i) => i))
         : playerParticipants;
-      const levelUps = applyLevelGain(state.team, state.nuzlockeMode ? [] : state.items, effectiveParticipants, maxEnemyLevel, state.nuzlockeMode, baseGainOverride, state.isEndlessMode ? Infinity : getLevelCapForMap());
+      // Override 0 = the fight yields NO experience at all (wild Pokémon,
+      // legendaries, alphas) — not even catch-up or Lucky Egg crumbs. XP
+      // comes from trainers, rivals and leaders only.
+      const levelUps = baseGainOverride === 0 ? []
+        : applyLevelGain(state.team, state.nuzlockeMode ? [] : state.items, effectiveParticipants, maxEnemyLevel, state.nuzlockeMode, baseGainOverride, state.isEndlessMode ? Infinity : getLevelCapForMap());
       const skipAll = autoSkip || manuallySkipped || _battleAuto;
       battleSpeedMultiplier = skipAll ? SKIP_SPEED : 1;
       skipBtn.textContent = 'Skip';
