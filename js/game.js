@@ -103,6 +103,11 @@ function loadRun() {
     state.currentNode = saved.currentNodeId ? (state.map?.nodes?.[saved.currentNodeId] || null) : null;
     delete state.currentNodeId;
     delete state.rngSeed;
+    // Migrate slug-style dex names saved by older versions
+    // (Darmanitan-standard -> Darmanitan); nicknames are untouched.
+    if (typeof cleanDexName === 'function' && Array.isArray(state.team)) {
+      for (const p of state.team) if (p && p.name) p.name = cleanDexName(p.name);
+    }
     return true;
   } catch { return false; }
 }

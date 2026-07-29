@@ -1048,15 +1048,29 @@ function getStaticPokedexEntry(id) {
   return _staticPokedex ? _staticPokedex[id] : null;
 }
 
+// Pretty display names for the dex's slug-style entries: form suffixes are
+// dropped (Darmanitan-standard -> Darmanitan) and the handful of real
+// hyphenated names are mapped explicitly.
+const DEX_NAME_FIXES = {
+  'Nidoran-f': 'Nidoran♀', 'Nidoran-m': 'Nidoran♂',
+  'Mr-mime': 'Mr. Mime', 'Mime-jr': 'Mime Jr.',
+  'Ho-oh': 'Ho-Oh', 'Porygon-z': 'Porygon-Z',
+};
+function cleanDexName(name) {
+  if (!name) return name;
+  if (DEX_NAME_FIXES[name]) return DEX_NAME_FIXES[name];
+  return name.split('-')[0];
+}
+
 // Display-field lookups used by the dex / HoF renderers. The static pokedex
 // is the primary source (~324 KB JSON covering 649 species). If it hasn't
 // loaded yet or failed to load (file:// CORS, network blip, …), fall back to
 // per-Pokemon PokeAPI cache populated during normal play.
 function getSpeciesName(id) {
   const sp = _staticPokedex ? _staticPokedex[id] : null;
-  if (sp?.name) return sp.name;
+  if (sp?.name) return cleanDexName(sp.name);
   const cached = getCached(`pkrl_poke_${id}`);
-  return cached?.name || `#${id}`;
+  return cached?.name ? cleanDexName(cached.name) : `#${id}`;
 }
 function getSpeciesTypes(id) {
   const sp = _staticPokedex ? _staticPokedex[id] : null;
@@ -1128,7 +1142,7 @@ async function fetchPokemonById(idOrSlug) {
       const eraStats = applyEraStats(idOrSlug, entry.baseStats);
       return {
         id: idOrSlug,
-        name: entry.name,
+        name: cleanDexName(entry.name),
         types: entry.types,
         baseStats: eraStats,
         bst: Object.values(eraStats).reduce((a,b)=>a+b,0),
