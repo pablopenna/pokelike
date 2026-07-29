@@ -159,6 +159,13 @@ function renderPokemonCard(pokemon, onClick, selected, dexCaught = false, hofSta
       const buffCount = pokemon.statBuffs?.[key] ?? 0;
       const grayPct = Math.round((val / 255) * 100);
       const bluePct = Math.round((buffCount / 10) * grayPct);
+      // Value-scaled bar color (255 = max possible base stat): low stats
+      // render dark red, high stats light green — the lighter the bar, the
+      // better the stat. Each bar sweeps dark→light along its length.
+      const t = Math.min(1, val / 255);
+      const hue = Math.round(t * 130);
+      const barCol  = `hsl(${hue},78%,${Math.round(34 + t * 28)}%)`;
+      const barDark = `hsl(${hue},70%,${Math.round(20 + t * 16)}%)`;
       const baseVal = key === 'hp'
         ? (pokemon.maxHp ?? Math.floor(val * pokemon.level / 50) + pokemon.level + 10)
         : Math.floor(val * pokemon.level / 50) + 5;
@@ -168,7 +175,7 @@ function renderPokemonCard(pokemon, onClick, selected, dexCaught = false, hofSta
       return `<div class="stat-row" data-tooltip="${lbl}: ${effectiveVal}${buffCount > 0 ? ` (+${buffCount*10}%)` : ''}">
         <span class="stat-lbl">${lbl}</span>
         <div class="stat-bar-bg">
-          <div class="stat-bar-fill ${cls}" style="width:${grayPct}%"></div>
+          <div class="stat-bar-fill ${cls}" style="width:${grayPct}%;background:linear-gradient(90deg,${barDark},${barCol})"></div>
           ${buffCount > 0 ? `<div class="stat-buff-overlay" style="width:${bluePct}%"></div>` : ''}
         </div>
         <span class="stat-val">${effectiveVal}</span>

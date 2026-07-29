@@ -539,13 +539,9 @@ h1, h2, .pixel-font {
 .stat-val { font-family: 'Press Start 2P', monospace; font-size: 8px; color: inherit; width: 26px; text-align: right; flex-shrink: 0; }
 .stat-bar-bg { flex: 1; height: 7px; background: var(--bg3); position: relative; border-radius: 2px; overflow: hidden; }
 .stat-bar-fill { height: 100%; }
-/* Per-stat colors (classic dex palette) — readable at a glance */
-.stat-hp  { background: #5cb85c; }
-.stat-atk { background: #e0703a; }
-.stat-def { background: #4a90d9; }
-.stat-spa { background: #b56ce0; }
-.stat-spd { background: #45bfa5; }
-.stat-spe { background: #d9b93f; }
+/* Bar color is value-scaled inline (dark red → light green, see
+   renderPokemonCard); this is only the no-inline-style fallback. */
+.stat-hp, .stat-atk, .stat-def, .stat-spa, .stat-spd, .stat-spe { background: #888; }
 .stat-buff-overlay { position: absolute; top: 0; left: 0; height: 100%; background: #4488ff; pointer-events: none; }
 
 /* ---- Stat Buff Screen ---- */
