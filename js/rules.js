@@ -115,15 +115,17 @@ const POKELIKE_RULES = {
   },
 
   bosses: {
-    team_size: "Gym Leaders and the Elite Four/Champion field a full team of 6 Pokémon.",
-    typing:
-      "The canonical roster is kept and padded with extra Pokémon of the leader's type (the " +
-      "Champion, mixed type, gets a varied team). Filler is never an evolution beyond what its " +
-      "level allows — a low-level slot devolves to the right stage (e.g. Golem -> Geodude).",
+    team_size:
+      "Every Gym Leader and Elite Four member has a STATIC, hand-curated team of 6 (same species, " +
+      "levels and held items every run). Early gyms field a subset (3/4/5 members, always keeping " +
+      "the ace; full 6 from map 4). The Elite Four always fields 6.",
+    items:
+      "Every boss Pokémon holds a curated item matched to its role (Choice Band on bruisers, " +
+      "Choice Scarf on fast sweepers, Focus Sash on frail attackers, Eviolite on unevolved mons, " +
+      "Leftovers/Assault Vest on tanks...). Focus Sash works for both sides.",
     levels:
-      "Filler Pokémon fight AT the ace's level and every boss Pokémon holds an item. In Gen I+II, " +
-      "since each map's gym is a random Gen 1/Gen 2 leader, levels are normalized to a per-map target " +
-      "for consistent difficulty (clamped to level 100).",
+      "In Gen I+II, since each map's gym is a random Gen 1/Gen 2 leader, levels are normalized to " +
+      "a per-map target for consistent difficulty (clamped to level 100).",
   },
 
   items: "Held items and consumables modify stats, healing, XP (e.g. Lucky Egg), and more.",
@@ -271,8 +273,9 @@ const _GUIDE_SECTIONS = [
     </ul>` },
   { id: 'league', icon: '🏆', title: 'Gyms & the League', html: `
     <ul>
-      <li>Every Gym Leader fields a <b>full team of 6</b>: their canonical aces plus type-matched filler at
-      appropriate levels — never an evolution beyond what its level allows.</li>
+      <li>Every Gym Leader has a <b>fixed, hand-curated team of 6</b> with role-matched held items
+      (Choice Band, Focus Sash, Eviolite…) — the same lineup every run. Early gyms field a subset
+      (3-5, always keeping the ace); from map 4 you face all 6.</li>
       <li>Map 9 is the <b>Elite Four</b>: four members plus the Champion, back-to-back, with a prep screen
       between battles to reorder your team and use items.</li>
       <li>In <b>Tot</b> mode each gym slot is rolled among the three regions' leaders, and the league mixes

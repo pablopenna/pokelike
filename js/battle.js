@@ -337,8 +337,9 @@ function executeTurn(ctx, io, turn, action, roundState) {
   const targetPreHp = target.currentHp;
   target.currentHp = Math.max(0, target.currentHp - damage);
 
-  // Focus Sash: guaranteed survive from full HP
-  if (target.currentHp === 0 && targetPreHp === target.maxHp && tSide === 'player' && target.heldItem?.id === 'focus_sash') {
+  // Focus Sash: guaranteed survive from full HP (both sides — boss teams
+  // carry curated sashes too)
+  if (target.currentHp === 0 && targetPreHp === target.maxHp && target.heldItem?.id === 'focus_sash') {
     target.currentHp = 1;
   }
 
