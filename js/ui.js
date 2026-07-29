@@ -859,6 +859,19 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
   const fx  = ELEMENT_FX[type] || ELEMENT_FX.normal;
   const rgb = TYPE_COLORS_RGB[type] || '200,200,200';
   const E   = TIER_FX[Math.max(0, Math.min(2, tier))] || TIER_FX[1];
+  // Signature moves override the type's generic motion so the animation
+  // matches the attack's NAME: Draco Meteor rains comets, Surf is a wave,
+  // Bubble streams bubbles, Blizzard is a storm... Everything else keeps
+  // its type's motion.
+  const SIGNATURE_MOTIONS = {
+    'dragon:s:2': 'dracometeor', // Draco Meteor
+    'water:s:0':  'bubblestream',// Bubble
+    'water:s:1':  'wave',        // Surf
+    'ice:s:0':    'icywind',     // Icy Wind
+    'ice:s:1':    'icebeam',     // Ice Beam
+    'ice:s:2':    'blizzard',    // Blizzard
+  };
+  const motion = (isSpecial && SIGNATURE_MOTIONS[`${type}:s:${Math.max(0, Math.min(2, tier))}`]) || fx.motion;
   const dx = to.x - from.x, dy = to.y - from.y;
   const dist = Math.hypot(dx, dy) || 1;
   const nx = dx / dist, ny = dy / dist;
@@ -920,6 +933,18 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
 
   // ── travel renderers (special phase 1): each type draws ITS phenomenon ──
   const jitter = (k, f = 1) => Math.sin(k * 12.9898 + R[4] * 78.233) * f;
+  const flake = (x, y, r, rot, a) => { // 6-spoke snowflake
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    ctx.strokeStyle = `rgba(240,250,255,${a})`; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+    for (let s = 0; s < 6; s++) {
+      ctx.rotate(Math.PI / 3);
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(r, 0);
+      ctx.moveTo(r * 0.55, 0); ctx.lineTo(r * 0.78, -r * 0.24);
+      ctx.moveTo(r * 0.55, 0); ctx.lineTo(r * 0.78, r * 0.24);
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
   const travel = (st) => {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter'; // additive glow — colors bloom
@@ -927,8 +952,9 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
     // shadowBlur is the classic canvas cost sink — keep it modest, and the
     // gradient-heavy motions below zero it out entirely (their glow is baked
     // into the radial gradients already).
-    ctx.shadowBlur = ['flamejet', 'waterjet', 'swarm', 'vines', 'spray'].includes(fx.motion) ? 0 : 10 * E.scale;
-    switch (fx.motion) {
+    ctx.shadowBlur = ['flamejet', 'waterjet', 'swarm', 'vines', 'spray',
+      'wave', 'bubblestream', 'icywind', 'icebeam', 'blizzard', 'dracometeor'].includes(motion) ? 0 : 10 * E.scale;
+    switch (motion) {
 
       case 'comet': { // normal/fighting: energy comet with flickering tongues
         for (const off of [0, ...sideOffsets]) {
@@ -1030,6 +1056,206 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
           ctx.strokeStyle = `rgba(255,255,240,${0.95 - bIdx * 0.25})`; ctx.lineWidth = 4 * E.scale; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
           ctx.beginPath(); v.slice(0, upTo).forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)); ctx.stroke();
           ctx.strokeStyle = `rgba(${rgb},${0.7 - bIdx * 0.2})`; ctx.lineWidth = 9 * E.scale; ctx.stroke();
+        }
+        break;
+      }
+
+      case 'dracometeor': { // DRACO METEOR: an orb rockets skyward, then comets RAIN
+        const CH = 0.22;
+        if (st < CH) {
+          // charge: energy orb climbs off the top of the screen
+          const ct = st / CH;
+          const oy = from.y - ct * (from.y + 50);
+          ctx.strokeStyle = `rgba(${rgb},${0.7 * (1 - ct * 0.5)})`;
+          ctx.lineWidth = 6 * E.scale; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(from.x, from.y - 10); ctx.lineTo(from.x, oy + 14); ctx.stroke();
+          glowDot(from.x, oy, (10 + ct * 9) * E.scale, '255,240,255', rgb, 0.95);
+        }
+        const mt = (st - CH) / (1 - CH);
+        if (mt > 0) {
+          const N = 6;
+          for (let k = 0; k < N; k++) {
+            const t2 = (mt - k * 0.085) / 0.5; if (t2 <= 0) continue;
+            const offX = (R[6 + k] - 0.5) * 130 * E.scale;
+            const offY = (R[14 + k] - 0.5) * 34 * E.scale;
+            const ex = to.x + offX, ey = to.y + offY;
+            const sx = ex + 70 + R[22 + k] * 50, sy = -40;
+            const tt = Math.min(1, t2);
+            const mx2 = sx + (ex - sx) * tt, my2 = sy + (ey - sy) * tt;
+            if (t2 < 1) {
+              // streaking comet: long gradient tail + white-hot head
+              const tlen = 0.32;
+              const bx2 = sx + (ex - sx) * Math.max(0, tt - tlen), by2 = sy + (ey - sy) * Math.max(0, tt - tlen);
+              const g2 = ctx.createLinearGradient(bx2, by2, mx2, my2);
+              g2.addColorStop(0, `rgba(${rgb},0)`); g2.addColorStop(1, `rgba(${rgb},0.95)`);
+              ctx.strokeStyle = g2; ctx.lineWidth = (k === 0 ? 11 : 7) * E.scale; ctx.lineCap = 'round';
+              ctx.beginPath(); ctx.moveTo(bx2, by2); ctx.lineTo(mx2, my2); ctx.stroke();
+              glowDot(mx2, my2, (k === 0 ? 16 : 11) * E.scale, '255,246,255', rgb, 1);
+            } else {
+              // touchdown: shock ring + starburst flash
+              const bt = Math.min(1, (t2 - 1) * 2.2), ba = 1 - bt;
+              ctx.strokeStyle = `rgba(${rgb},${ba})`; ctx.lineWidth = 4 * E.scale;
+              ctx.beginPath(); ctx.arc(ex, ey, 8 + bt * 42 * E.scale, 0, 6.283); ctx.stroke();
+              glowDot(ex, ey, (20 - bt * 12) * E.scale, '255,255,255', rgb, ba);
+              for (let s2 = 0; s2 < 5; s2++) {
+                const a2 = R[30 + k] * 6.28 + s2 * 1.257;
+                ctx.strokeStyle = `rgba(255,240,255,${ba * 0.85})`; ctx.lineWidth = 2.5;
+                ctx.beginPath(); ctx.moveTo(ex + Math.cos(a2) * 6, ey + Math.sin(a2) * 6);
+                ctx.lineTo(ex + Math.cos(a2) * (12 + bt * 26) * E.scale, ey + Math.sin(a2) * (12 + bt * 26) * E.scale); ctx.stroke();
+              }
+            }
+          }
+        }
+        break;
+      }
+
+      case 'bubblestream': { // BUBBLE: a wobbling stream of glassy bubbles
+        const front = Math.min(1, st * 1.5);
+        const N = Math.round(15 * E.count);
+        for (let k = 0; k < N; k++) {
+          const t2 = ((k * 0.077 + st * 1.1) % 1);
+          if (t2 > front) continue;
+          const b = pathAt(t2, Math.sin(t2 * 9 + k * 2.4 + st * 5) * 16 * E.scale);
+          const r2 = (3.5 + (k % 4) * 2.4) * E.scale;
+          ctx.fillStyle = `rgba(${rgb},0.22)`;
+          ctx.beginPath(); ctx.arc(b.x, b.y, r2, 0, 6.283); ctx.fill();
+          ctx.strokeStyle = 'rgba(215,242,255,0.95)'; ctx.lineWidth = 1.8;
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.beginPath(); ctx.arc(b.x - r2 * 0.35, b.y - r2 * 0.35, r2 * 0.25, 0, 6.283); ctx.fill();
+        }
+        if (st > 0.55) { // bubbles popping on the victim
+          for (let k = 0; k < 4; k++) {
+            const pt = ((st - 0.55) / 0.45 + k * 0.22) % 1, pa = 1 - pt;
+            ctx.strokeStyle = `rgba(220,245,255,${pa * 0.9})`; ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(to.x + jitter(k, 26), to.y + jitter(k + 5, 22), 4 + pt * 16 * E.scale, 0, 6.283);
+            ctx.stroke();
+          }
+        }
+        break;
+      }
+
+      case 'wave': { // SURF: a rolling tsunami sweeps over the victim
+        const sgn = Math.sign(dx) || 1;
+        const floor = Math.max(from.y, to.y) + 26;
+        const span = Math.abs(dx) + 80;
+        const cx2 = from.x + sgn * st * span;
+        const H = (58 + 20 * E.scale) * Math.min(1, st * 3.2) * (1 + 0.06 * Math.sin(st * 22));
+        // trailing water body
+        const back = from.x - sgn * 60;
+        const bodyG = ctx.createLinearGradient(0, floor - H, 0, floor + 14);
+        bodyG.addColorStop(0, `rgba(${rgb},0.85)`); bodyG.addColorStop(1, `rgba(${rgb},0.25)`);
+        ctx.fillStyle = bodyG;
+        ctx.beginPath();
+        ctx.moveTo(back, floor + 14);
+        ctx.lineTo(back, floor - H * 0.3);
+        ctx.quadraticCurveTo(cx2 - sgn * 90, floor - H * 0.5, cx2 - sgn * 34, floor - H);
+        // curling crest tip
+        ctx.quadraticCurveTo(cx2 + sgn * 16, floor - H * 1.06, cx2 + sgn * 12, floor - H * 0.62);
+        ctx.quadraticCurveTo(cx2 + sgn * 4, floor - H * 0.42, cx2 + sgn * 30, floor - H * 0.18);
+        ctx.lineTo(cx2 + sgn * 34, floor + 14);
+        ctx.closePath(); ctx.fill();
+        // foam along the crest + curl
+        for (let k = 0; k < Math.round(12 * E.count); k++) {
+          const ft2 = k / 12;
+          const fx2 = cx2 - sgn * 34 + sgn * ft2 * 48 + jitter(k, 6);
+          const fy2 = floor - H * (1 - ft2 * 0.55) + jitter(k + 7, 5);
+          glowDot(fx2, fy2, (3 + (k % 3) * 2) * E.scale, '240,250,255', '190,225,255', 0.9);
+        }
+        // spray thrown ahead of the wave
+        for (let k = 0; k < 6; k++) {
+          glowDot(cx2 + sgn * (20 + k * 9) + jitter(k, 8), floor - H * 0.75 - jitter(k + 3, 18), 2.6 * E.scale, '235,248,255', rgb, 0.8);
+        }
+        break;
+      }
+
+      case 'icywind': { // ICY WIND: sinuous freezing gusts carrying snowflakes
+        const front = Math.min(1, st * 1.4);
+        for (let s2 = 0; s2 < 3; s2++) {
+          ctx.strokeStyle = `rgba(225,246,255,${0.55 - s2 * 0.13})`;
+          ctx.lineWidth = (5 - s2) * E.scale; ctx.lineCap = 'round';
+          ctx.beginPath();
+          for (let seg = 0; seg <= 16; seg++) {
+            const t2 = (seg / 16) * front;
+            const b = pathAt(t2, Math.sin(t2 * 7 + st * 10 + s2 * 2.1) * (10 + s2 * 9) * E.scale);
+            seg === 0 ? ctx.moveTo(b.x, b.y) : ctx.lineTo(b.x, b.y);
+          }
+          ctx.stroke();
+        }
+        const N = Math.round(11 * E.count);
+        for (let k = 0; k < N; k++) {
+          const t2 = ((k * 0.11 + st * 1.35) % 1) * front;
+          const b = pathAt(t2, Math.sin(t2 * 8 + k * 1.9) * 18 * E.scale);
+          flake(b.x, b.y, (3.4 + (k % 3) * 1.8) * E.scale, st * 7 + k, 0.9);
+        }
+        break;
+      }
+
+      case 'icebeam': { // ICE BEAM: a crystalline ray that freezes on contact
+        const front = Math.min(1, st * 1.5);
+        const P = t2 => ({ x: from.x + dx * t2, y: from.y + dy * t2 });
+        const hd = P(front);
+        // outer glow + icy core
+        ctx.strokeStyle = `rgba(${rgb},0.55)`; ctx.lineWidth = 15 * E.scale; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(hd.x, hd.y); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.lineWidth = 4.5 * E.scale;
+        ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(hd.x, hd.y); ctx.stroke();
+        // jagged crystal edges riding the beam
+        for (const sgn of [-1, 1]) {
+          ctx.strokeStyle = 'rgba(210,240,255,0.85)'; ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          for (let seg = 0; seg <= 14; seg++) {
+            const t2 = (seg / 14) * front;
+            const w = (8 + ((seg % 2) ? 4 : -2)) * E.scale * sgn;
+            const b = P(t2);
+            seg === 0 ? ctx.moveTo(b.x + px * w, b.y + py * w) : ctx.lineTo(b.x + px * w, b.y + py * w);
+          }
+          ctx.stroke();
+        }
+        // sparkling flakes drifting off the ray
+        for (let k = 0; k < Math.round(7 * E.count); k++) {
+          const t2 = ((k * 0.17 + st * 1.8) % 1) * front;
+          const b = P(t2);
+          flake(b.x + jitter(k, 14), b.y + jitter(k + 4, 14), 3 * E.scale, st * 9 + k, 0.8);
+        }
+        glowDot(hd.x, hd.y, 13 * E.scale, '255,255,255', rgb, 0.95);
+        break;
+      }
+
+      case 'blizzard': { // BLIZZARD: a howling whole-field snowstorm
+        const W2 = canvas.width, H2 = canvas.height;
+        const dir = Math.sign(dx) || 1;
+        // slanted gust bands sweeping across
+        for (let g2 = 0; g2 < 3; g2++) {
+          const gx2 = (((g2 * 0.37 + st * 1.1) % 1) * (W2 + 300) - 150) * dir + (dir < 0 ? W2 : 0);
+          ctx.save();
+          ctx.translate(gx2, H2 / 2); ctx.rotate(dir * 0.22);
+          ctx.fillStyle = `rgba(235,248,255,${0.10 + 0.05 * Math.sin(st * 18 + g2 * 2)})`;
+          ctx.fillRect(-70, -H2, 140, H2 * 2);
+          ctx.restore();
+        }
+        // wind-driven flakes with streaks (parallax speeds)
+        const N = Math.round(34 * E.count);
+        for (let k = 0; k < N; k++) {
+          const sp2 = 0.55 + (k % 5) * 0.16;
+          const x2 = ((R[k % 48] + st * sp2 * dir + 1) % 1) * W2;
+          const y2 = ((R[(k * 7 + 3) % 48] + st * sp2 * 0.5) % 1) * H2;
+          ctx.strokeStyle = `rgba(230,246,255,${0.35 + (k % 3) * 0.12})`;
+          ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - dir * (14 + (k % 4) * 7) * E.scale, y2 + 6); ctx.stroke();
+          if (k % 2 === 0) flake(x2, y2, (2.6 + (k % 3) * 1.7) * E.scale, st * 6 + k, 0.85);
+        }
+        // the victim ices over as the storm peaks
+        if (st > 0.55) {
+          const cg = (st - 0.55) / 0.45;
+          ctx.strokeStyle = `rgba(255,255,255,${0.9 * cg})`; ctx.lineWidth = 2.5;
+          ctx.fillStyle = `rgba(${rgb},${0.3 * cg})`;
+          const CR = 40 * E.scale * cg;
+          ctx.beginPath();
+          for (let s2 = 0; s2 < 6; s2++) { const a2 = s2 * 1.047 + 0.52; s2 === 0 ? ctx.moveTo(to.x + Math.cos(a2) * CR, to.y + Math.sin(a2) * CR) : ctx.lineTo(to.x + Math.cos(a2) * CR, to.y + Math.sin(a2) * CR); }
+          ctx.closePath(); ctx.fill(); ctx.stroke();
+          for (let s2 = 0; s2 < 6; s2++) { const a2 = s2 * 1.047 + 0.52; ctx.beginPath(); ctx.moveTo(to.x, to.y); ctx.lineTo(to.x + Math.cos(a2) * CR, to.y + Math.sin(a2) * CR); ctx.stroke(); }
         }
         break;
       }
