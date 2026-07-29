@@ -275,6 +275,21 @@ async function initGame() {
   } else {
     continueBtn.style.display = 'none';
   }
+
+  // Warm the image cache for what the player will see next (map backgrounds
+  // for the active run's gen + saved team sprites) once the browser is idle —
+  // kills the visual "pop" when entering the map without blocking boot.
+  const warmImages = () => {
+    try {
+      const urls = [];
+      const cfg = GEN_RUN_CONFIG[getRunGen()];
+      if (cfg?.mapBg) for (let i = 0; i < 9; i++) urls.push(cfg.mapBg(i));
+      if (Array.isArray(state.team)) for (const p of state.team) if (p?.speciesId) urls.push(`sprites/pokemon/${p.speciesId}.png`);
+      for (const u of urls) { const im = new Image(); im.decoding = 'async'; im.src = u; }
+    } catch {}
+  };
+  if ('requestIdleCallback' in window) requestIdleCallback(warmImages, { timeout: 3000 });
+  else setTimeout(warmImages, 1500);
 }
 
 // Professor-style intro: the journey's mode is chosen through classic GBA
@@ -3666,7 +3681,7 @@ const STAGE_REGION_BG = [
   'ui/regions/Johtoart.jpg',
   'ui/regions/ORAS_Hoenn_Map.jpg',
   'ui/regions/Pt_Artwork_Sinnoh-Karte_(mit_Zerrwelt).jpg',
-  'ui/regions/Einall_S2W2.png',
+  'ui/regions/Einall_S2W2.jpg',
 ];
 
 function getStageName(n) { return STAGE_META[n]?.label || `Stage ${n}`; }

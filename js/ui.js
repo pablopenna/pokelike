@@ -4730,6 +4730,7 @@ async function openPokedexModal(initialTab = 'normal') {
         return header + `<div class="dex-card dex-caught"${towerTitle}>
           <div class="dex-num">#${String(id).padStart(3,'0')}</div>
           <img src="${BASE + id + '.png'}" alt="${name}" class="dex-sprite"
+               loading="lazy" decoding="async"
                onerror="this.src='';this.style.display='none'">
           <div class="dex-name">${name}</div>
           <div class="dex-types">${types}</div>
@@ -4738,6 +4739,7 @@ async function openPokedexModal(initialTab = 'normal') {
       return header + `<div class="dex-card dex-unknown">
         <div class="dex-num">#${String(id).padStart(3,'0')}</div>
         <img src="${BASE + id + '.png'}" alt="???" class="dex-sprite dex-silhouette"
+             loading="lazy" decoding="async"
              onerror="this.src='';this.style.display='none'">
         <div class="dex-name dex-unknown-name">???</div>
       </div>`;
@@ -4762,6 +4764,7 @@ async function openPokedexModal(initialTab = 'normal') {
         return header + `<div class="dex-card shiny-dex-card">
           <div class="dex-num">#${String(id).padStart(3,'0')}</div>
           <img src="${BASE_SHINY + id + '.png'}" alt="${name}" class="dex-sprite"
+               loading="lazy" decoding="async"
                onerror="this.src='';this.style.display='none'">
           <div class="dex-name">${name}</div>
           <div class="dex-types">${types}</div>
@@ -4771,6 +4774,7 @@ async function openPokedexModal(initialTab = 'normal') {
       return header + `<div class="dex-card dex-unknown">
         <div class="dex-num">#${String(id).padStart(3,'0')}</div>
         <img src="${BASE_SHINY + id + '.png'}" alt="???" class="dex-sprite dex-silhouette"
+             loading="lazy" decoding="async"
              onerror="this.src='';this.style.display='none'">
         <div class="dex-name dex-unknown-name">???</div>
       </div>`;
