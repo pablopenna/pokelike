@@ -679,7 +679,6 @@ function showMapScreen() {
   if (typeof hideEndlessTraitPanel === 'function') hideEndlessTraitPanel();
   const regionPanel = document.getElementById('endless-region-panel');
   if (regionPanel) regionPanel.style.display = 'none';
-  document.querySelectorAll('.map-badges-label').forEach(el => el.style.display = '');
   showScreen('map-screen');
   const genCfg = GEN_RUN_CONFIG[getRunGen()];
   const mapInfo = document.getElementById('map-info');
@@ -704,8 +703,6 @@ function showMapScreen() {
     return `<img src="${BASE}${i + 1 + genCfg.badgeOffset}.png" alt="${label}" title="${label}"
       class="badge-icon-img${earned ? '' : ' badge-icon-missing'}">`;
   }).join('') + `<span class="badge-count-num" title="Badges earned">${state.badges}/8</span>`;
-  const badgeEl = document.getElementById('badge-count');
-  if (badgeEl) badgeEl.innerHTML = badgeHtml;
   const badgePanelEl = document.getElementById('badge-count-panel');
   if (badgePanelEl) badgePanelEl.innerHTML = badgeHtml;
 
@@ -3863,11 +3860,8 @@ function showEndlessMapScreen() {
     };
   }
 
-  const badgeCountEl = document.getElementById('badge-count');
-  if (badgeCountEl) badgeCountEl.innerHTML = '';
   const badgePanelEndless = document.getElementById('badge-count-panel');
   if (badgePanelEndless) badgePanelEndless.innerHTML = '';
-  document.querySelectorAll('.map-badges-label').forEach(el => el.style.display = 'none');
 
   renderTeamBar(state.team);
   renderItemBadges(state.items);

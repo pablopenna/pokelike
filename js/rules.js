@@ -154,7 +154,7 @@ const POKELIKE_RULES = {
       nodes:
         "Map nodes are SVG <g> groups inside the map SVG; each reachable node has a click handler. " +
         "Hover/label info comes from #map-node-tooltip. Click a reachable node group to advance.",
-      badges: "#badge-count shows gym progress.",
+      badges: "#badge-count-panel (floating strip at the bottom of the screen) shows gym progress.",
     },
     battle: {
       player_side: "#player-side .battle-pokemon (your Pokémon; active one has class .active-pokemon)",
