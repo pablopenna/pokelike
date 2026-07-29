@@ -580,6 +580,9 @@ h1, h2, .pixel-font {
   flex-wrap: wrap;
   justify-content: center;
 }
+/* One row per available move (name left, type + power right) */
+.poke-move-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; }
+.poke-move-row-meta { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .move-name {
   font-size: 9px;
   color: var(--text);

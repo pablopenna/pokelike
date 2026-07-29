@@ -183,12 +183,15 @@ function renderPokemonCard(pokemon, onClick, selected, dexCaught = false, hofSta
     }).join('')}</div>
     <div class="poke-hp">${renderHpBar(pokemon.currentHp, pokemon.maxHp)}</div>
     <div class="poke-move">
-      <div class="move-name">${move.name}</div>
-      <div class="move-header">
-        <span class="move-cat-badge ${catClass}">${catLabel}</span>
-        <span class="type-badge ${moveTypeClass}">${move.type}</span>
-        ${!move.noDamage ? `<span class="move-power-badge">${move.power} PWR</span>` : ''}
-      </div>
+      <div class="move-header"><span class="move-cat-badge ${catClass}">${catLabel}</span></div>
+      ${((typeof getMovesForPokemon === 'function') ? getMovesForPokemon(pokemon) : [move]).map(m => `
+      <div class="poke-move-row">
+        <span class="move-name">${m.name}</span>
+        <span class="poke-move-row-meta">
+          <span class="type-badge ${m.type ? `type-${m.type.toLowerCase()}` : ''}">${m.type}</span>
+          ${!m.noDamage ? `<span class="move-power-badge">${m.power} PWR</span>` : ''}
+        </span>
+      </div>`).join('')}
     </div>
   </div>`;
 }
