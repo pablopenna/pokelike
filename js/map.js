@@ -593,6 +593,16 @@ function renderMap(map, container, onNodeClick) {
       <stop offset="0" stop-color="#ffffff" stop-opacity="0.9"/>
       <stop offset="0.65" stop-color="#eaf4ff" stop-opacity="0.5"/>
       <stop offset="1" stop-color="#b8d4ee" stop-opacity="0.1"/>
+    </radialGradient>
+    <radialGradient id="map-aura-gold" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffd76b" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-color="#ffb830" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#ff9800" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="map-aura-red" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ff6a5a" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-color="#e03028" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#b01810" stop-opacity="0"/>
     </radialGradient>`;
   svg.appendChild(defs);
 
@@ -613,10 +623,14 @@ function renderMap(map, container, onNodeClick) {
     const elen = Math.hypot(exv, eyv) || 1;
     let hash = 0;
     for (const ch of edge.from + edge.to) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
-    const bowMag = Math.min(14, elen * 0.12) * ((hash & 1) ? 1 : -1);
-    const mx = (from.x + to.x) / 2 - (eyv / elen) * bowMag;
-    const my = (from.y + to.y) / 2 + (exv / elen) * bowMag;
-    const d = `M${from.x} ${from.y} Q${mx} ${my} ${to.x} ${to.y}`;
+    // Winding S-curve (cubic): the two control points bow to OPPOSITE sides,
+    // so routes meander like real footpaths instead of straight hops.
+    const sgn = (hash & 1) ? 1 : -1;
+    const mag = Math.min(18, elen * 0.16) * sgn;
+    const nxv = -eyv / elen, nyv = exv / elen;
+    const c1x = from.x + exv / 3 + nxv * mag,  c1y = from.y + eyv / 3 + nyv * mag;
+    const c2x = from.x + exv * 2 / 3 - nxv * mag, c2y = from.y + eyv * 2 / 3 - nyv * mag;
+    const d = `M${from.x} ${from.y} C${c1x} ${c1y} ${c2x} ${c2y} ${to.x} ${to.y}`;
 
     // road bed: a wide soft dark trail grounding the route on the terrain.
     // Distant routes get a whisper of a bed so the map doesn't turn into
@@ -714,8 +728,8 @@ function renderMap(map, container, onNodeClick) {
       // The rival/villain encounter draws noticeably larger than route
       // trainers — its size alone marks it as a special fight.
       const isSilverNode = node.type === NODE_TYPES.SILVER;
-      const iw = (isSilverNode ? 54 : isHumanFigure ? (isBossNode ? 52 : 38) : (isBossNode ? 52 : 40)) * nodeScale;
-      const ih = (isSilverNode ? 70 : isHumanFigure ? (isBossNode ? 52 : 52) : (isBossNode ? 52 : 40)) * nodeScale;
+      const iw = (isSilverNode ? 54 : isHumanFigure ? (isBossNode ? 60 : 38) : (isBossNode ? 60 : 40)) * nodeScale;
+      const ih = (isSilverNode ? 70 : isHumanFigure ? (isBossNode ? 60 : 52) : (isBossNode ? 60 : 40)) * nodeScale;
 
       const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
       img.setAttribute('href', sprite.replace(/ /g, '%20'));
@@ -735,6 +749,76 @@ function renderMap(map, container, onNodeClick) {
       shadow.setAttribute('ry', 4.5 * nodeScale);
       shadow.setAttribute('fill', 'rgba(0,0,0,0.32)');
       g.insertBefore(shadow, img);
+
+      // BIG-FIGHT presence: gym leaders and rival/villain ambushes get an
+      // aura, a slowly rotating seal and a GYM/VS tag — nobody should walk
+      // past these thinking they're routine nodes.
+      const isBigFight = (isBossNode || isSilverNode) && !node.visited;
+      if (isBigFight) {
+        const gold = isBossNode;
+        const auraR = Math.max(iw, ih) * 0.95;
+        const aura = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        aura.setAttribute('r', auraR);
+        aura.setAttribute('fill', `url(#map-aura-${gold ? 'gold' : 'red'})`);
+        const auraA = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
+        auraA.setAttribute('attributeName', 'opacity');
+        auraA.setAttribute('values', '0.6;1;0.6');
+        auraA.setAttribute('dur', '1.8s');
+        auraA.setAttribute('repeatCount', 'indefinite');
+        aura.appendChild(auraA);
+        g.insertBefore(aura, shadow);
+
+        const seal = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        seal.setAttribute('r', Math.max(iw, ih) * 0.62);
+        seal.setAttribute('fill', 'none');
+        seal.setAttribute('stroke', gold ? '#ffd76b' : '#ff6a5a');
+        seal.setAttribute('stroke-width', '2.5');
+        seal.setAttribute('stroke-dasharray', '7 6');
+        const spin = document.createElementNS('http://www.w3.org/2000/svg', 'animateTransform');
+        spin.setAttribute('attributeName', 'transform');
+        spin.setAttribute('type', 'rotate');
+        spin.setAttribute('from', '0 0 0');
+        spin.setAttribute('to', `${360 * (gold ? 1 : -1)} 0 0`);
+        spin.setAttribute('dur', '14s');
+        spin.setAttribute('repeatCount', 'indefinite');
+        seal.appendChild(spin);
+        g.insertBefore(seal, shadow);
+
+        // floating tag: GYM (gold) / VS (red)
+        const tag = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        const tagW = (gold ? 34 : 24) * Math.max(nodeScale, 0.8);
+        const tagH = 14 * Math.max(nodeScale, 0.8);
+        const tagY = -ih / 2 - tagH - 2;
+        const tagBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        tagBg.setAttribute('x', -tagW / 2);
+        tagBg.setAttribute('y', tagY);
+        tagBg.setAttribute('width', tagW);
+        tagBg.setAttribute('height', tagH);
+        tagBg.setAttribute('rx', 3.5);
+        tagBg.setAttribute('fill', gold ? '#c8a000' : '#d02820');
+        tagBg.setAttribute('stroke', '#fff');
+        tagBg.setAttribute('stroke-width', '1.5');
+        tag.appendChild(tagBg);
+        const tagTx = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        tagTx.setAttribute('x', 0);
+        tagTx.setAttribute('y', tagY + tagH / 2 + 0.5);
+        tagTx.setAttribute('text-anchor', 'middle');
+        tagTx.setAttribute('dominant-baseline', 'central');
+        tagTx.setAttribute('font-family', "'Press Start 2P', monospace");
+        tagTx.setAttribute('font-size', `${7 * Math.max(nodeScale, 0.8)}`);
+        tagTx.setAttribute('fill', '#fff');
+        tagTx.textContent = gold ? 'GYM' : 'VS';
+        tag.appendChild(tagTx);
+        const tagBob = document.createElementNS('http://www.w3.org/2000/svg', 'animateTransform');
+        tagBob.setAttribute('attributeName', 'transform');
+        tagBob.setAttribute('type', 'translate');
+        tagBob.setAttribute('additive', 'sum');
+        tagBob.setAttribute('values', '0 0; 0 -3; 0 0');
+        tagBob.setAttribute('dur', '1.1s');
+        tagBob.setAttribute('repeatCount', 'indefinite');
+        tag.appendChild(tagBob);
+        g.appendChild(tag);
+      }
 
       // Clickable: glassy platform plate + expanding pulse ring (modern
       // "you can go here" marker)
