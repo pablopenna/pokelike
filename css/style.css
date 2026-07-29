@@ -3298,9 +3298,24 @@ body.dark-mode .btn-primary:disabled { box-shadow: 3px 3px 0 0 #000; }
     padding-bottom: 0;
   }
   #team-bar .team-slot { flex: 1; width: auto; min-width: 0; }
-  #team-bar .team-slot-name { max-width: 100%; font-size: 7px; }
-  #team-bar .team-slot-lv { font-size: 7px; }
-  #team-bar .team-sprite { width: 32px; height: 32px; }
+  /* Readability: 7px dim text was illegible on phones — bigger, brighter,
+     with a touch of weight and shadow so it reads over any map art. */
+  #team-bar .team-slot-name {
+    max-width: 100%;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+    line-height: 1.2;
+  }
+  #team-bar .team-slot-lv {
+    font-size: 9px;
+    font-weight: 700;
+    color: #ffd76b;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+    line-height: 1.1;
+  }
+  #team-bar .team-sprite { width: 34px; height: 34px; }
 
   /* Items: icon-only horizontal strip; region panel: hidden on mobile */
   .map-panel-right { flex: 1 1 100%; padding: 2px 4px; min-width: 0; }
