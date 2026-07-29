@@ -586,7 +586,18 @@ function renderMap(map, container, onNodeClick) {
   const colGap = W / (maxLayerW + 0.2);
   const nodeScale = Math.max(0.45, Math.min(1.1, Math.min(rowGap, colGap) / 56));
 
-  // Draw ALL edges
+  // Shared defs: glassy platform gradient under clickable nodes
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  defs.innerHTML = `
+    <radialGradient id="map-plate" cx="0.5" cy="0.4" r="0.65">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="0.65" stop-color="#eaf4ff" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#b8d4ee" stop-opacity="0.1"/>
+    </radialGradient>`;
+  svg.appendChild(defs);
+
+  // Draw ALL edges — modern dotted route trails on a soft "road bed",
+  // gently bowed so paths read organic instead of ruler-straight.
   for (const edge of map.edges) {
     const from = positions[edge.from];
     const to = positions[edge.to];
@@ -595,30 +606,56 @@ function renderMap(map, container, onNodeClick) {
     const toNode   = map.nodes[edge.to];
     const travelled = fromNode.visited && toNode.visited;
     const onPath = (fromNode.visited || fromNode.accessible) && (toNode.visited || toNode.accessible);
-
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', from.x);
-    line.setAttribute('y1', from.y);
-    line.setAttribute('x2', to.x);
-    line.setAttribute('y2', to.y);
     // A "next step" edge leads from where you are now into a node you can click.
     const isNextStep = fromNode.visited && toNode.accessible && !toNode.visited;
-    line.setAttribute('stroke', travelled ? '#333' : isNextStep ? '#ffe066' : onPath ? '#999' : '#222');
-    line.setAttribute('stroke-width', isNextStep ? '3' : onPath ? '2.5' : '1.5');
-    if (!onPath) line.setAttribute('stroke-dasharray', '4,5');
-    if (isNextStep) {
-      // Glowing dashes that flow toward the clickable node, guiding the eye.
-      line.setAttribute('stroke-dasharray', '7,7');
-      line.setAttribute('stroke-linecap', 'round');
-      line.style.filter = 'drop-shadow(0 0 3px #ffe066)';
+
+    const exv = to.x - from.x, eyv = to.y - from.y;
+    const elen = Math.hypot(exv, eyv) || 1;
+    let hash = 0;
+    for (const ch of edge.from + edge.to) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
+    const bowMag = Math.min(14, elen * 0.12) * ((hash & 1) ? 1 : -1);
+    const mx = (from.x + to.x) / 2 - (eyv / elen) * bowMag;
+    const my = (from.y + to.y) / 2 + (exv / elen) * bowMag;
+    const d = `M${from.x} ${from.y} Q${mx} ${my} ${to.x} ${to.y}`;
+
+    // road bed: a wide soft dark trail grounding the route on the terrain.
+    // Distant routes get a whisper of a bed so the map doesn't turn into
+    // a dark spiderweb on branchy layers.
+    const bed = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    bed.setAttribute('d', d);
+    bed.setAttribute('fill', 'none');
+    bed.setAttribute('stroke', `rgba(24,18,8,${travelled || onPath || isNextStep ? 0.26 : 0.10})`);
+    bed.setAttribute('stroke-width', isNextStep ? '10' : '8');
+    bed.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(bed);
+
+    const trail = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    trail.setAttribute('d', d);
+    trail.setAttribute('fill', 'none');
+    trail.setAttribute('stroke-linecap', 'round');
+    if (travelled) {
+      // route already walked: a calm solid ribbon
+      trail.setAttribute('stroke', 'rgba(150,210,165,0.5)');
+      trail.setAttribute('stroke-width', '3');
+    } else if (isNextStep) {
+      // golden dot trail flowing toward the clickable node
+      trail.setAttribute('stroke', '#ffe066');
+      trail.setAttribute('stroke-width', '4.5');
+      trail.setAttribute('stroke-dasharray', '0.1 11');
+      trail.style.filter = 'drop-shadow(0 0 3px #ffe066)';
       const flow = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
       flow.setAttribute('attributeName', 'stroke-dashoffset');
-      flow.setAttribute('values', '28;0');
-      flow.setAttribute('dur', '0.7s');
+      flow.setAttribute('values', '22.2;0');
+      flow.setAttribute('dur', '0.8s');
       flow.setAttribute('repeatCount', 'indefinite');
-      line.appendChild(flow);
+      trail.appendChild(flow);
+    } else {
+      // future routes: quiet dotted trails, brighter when reachable soon
+      trail.setAttribute('stroke', onPath ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.20)');
+      trail.setAttribute('stroke-width', onPath ? '3.2' : '2.6');
+      trail.setAttribute('stroke-dasharray', '0.1 9');
     }
-    svg.appendChild(line);
+    svg.appendChild(trail);
   }
 
 
@@ -690,36 +727,46 @@ function renderMap(map, container, onNodeClick) {
       img.setAttribute('preserveAspectRatio', 'xMidYMid meet');
       g.appendChild(img);
 
-      // Accessible: pulsing pixelated shadow under the sprite
+      // Soft ground shadow settles every sprite onto the terrain
+      const shadow = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+      shadow.setAttribute('cx', 0);
+      shadow.setAttribute('cy', ih / 2 - 1);
+      shadow.setAttribute('rx', iw * 0.38);
+      shadow.setAttribute('ry', 4.5 * nodeScale);
+      shadow.setAttribute('fill', 'rgba(0,0,0,0.32)');
+      g.insertBefore(shadow, img);
+
+      // Clickable: glassy platform plate + expanding pulse ring (modern
+      // "you can go here" marker)
       if (isClickable) {
-        const px = 4; // pixel grid size
-        const shadowY = ih / 2 - 2;
-        const shadow = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        shadow.setAttribute('fill', '#fff');
+        const pr = Math.max(iw, ih) * 0.55;
+        const plate = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        plate.setAttribute('cy', 4 * nodeScale);
+        plate.setAttribute('r', pr);
+        plate.setAttribute('fill', 'url(#map-plate)');
+        plate.setAttribute('stroke', 'rgba(255,255,255,0.85)');
+        plate.setAttribute('stroke-width', '1.5');
+        g.insertBefore(plate, shadow);
 
-        const anim = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
-        anim.setAttribute('attributeName', 'opacity');
-        anim.setAttribute('values', '0.55;0.1;0.55');
-        anim.setAttribute('dur', '1.5s');
-        anim.setAttribute('repeatCount', 'indefinite');
-        shadow.appendChild(anim);
-
-        // Three rows of rectangles snapped to px grid — narrow/wide/narrow
-        const rows = [
-          Math.round(iw * 0.35 / px) * px,
-          Math.round(iw * 0.55 / px) * px,
-          Math.round(iw * 0.35 / px) * px,
-        ];
-        rows.forEach((w, i) => {
-          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-          rect.setAttribute('x', -(w / 2));
-          rect.setAttribute('y', shadowY + (i - 1) * px - px / 2);
-          rect.setAttribute('width', w);
-          rect.setAttribute('height', px);
-          shadow.appendChild(rect);
-        });
-
-        g.insertBefore(shadow, img); // behind sprite
+        const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        ring.setAttribute('cy', 4 * nodeScale);
+        ring.setAttribute('r', pr);
+        ring.setAttribute('fill', 'none');
+        ring.setAttribute('stroke', '#ffd76b');
+        ring.setAttribute('stroke-width', '2.5');
+        const ringR = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
+        ringR.setAttribute('attributeName', 'r');
+        ringR.setAttribute('values', `${pr};${pr + 11}`);
+        ringR.setAttribute('dur', '1.4s');
+        ringR.setAttribute('repeatCount', 'indefinite');
+        ring.appendChild(ringR);
+        const ringO = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
+        ringO.setAttribute('attributeName', 'stroke-opacity');
+        ringO.setAttribute('values', '0.9;0');
+        ringO.setAttribute('dur', '1.4s');
+        ringO.setAttribute('repeatCount', 'indefinite');
+        ring.appendChild(ringO);
+        g.insertBefore(ring, shadow);
       }
 
       if (isCurrent) {
@@ -777,6 +824,15 @@ function renderMap(map, container, onNodeClick) {
     } else {
       // ---- Circle-based node ----
       const r = (isBossNode ? 22 : 18) * nodeScale;
+
+      // soft ground shadow so the token sits ON the map
+      const cShadow = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+      cShadow.setAttribute('cy', r * 0.9);
+      cShadow.setAttribute('rx', r * 0.85);
+      cShadow.setAttribute('ry', 4 * nodeScale);
+      cShadow.setAttribute('fill', 'rgba(0,0,0,0.32)');
+      g.appendChild(cShadow);
+
       const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       circle.setAttribute('r', r);
       circle.setAttribute('fill', isInaccessible ? '#2a2a3a' : getNodeColor(node));
@@ -784,12 +840,25 @@ function renderMap(map, container, onNodeClick) {
       circle.setAttribute('stroke-width', isClickable ? '3' : '1');
 
       if (isClickable) {
-        const anim = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
-        anim.setAttribute('attributeName', 'stroke-opacity');
-        anim.setAttribute('values', '1;0.3;1');
-        anim.setAttribute('dur', '1.5s');
-        anim.setAttribute('repeatCount', 'indefinite');
-        circle.appendChild(anim);
+        // expanding pulse ring, same language as the sprite nodes
+        const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        ring.setAttribute('r', r);
+        ring.setAttribute('fill', 'none');
+        ring.setAttribute('stroke', '#ffd76b');
+        ring.setAttribute('stroke-width', '2.5');
+        const ringR = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
+        ringR.setAttribute('attributeName', 'r');
+        ringR.setAttribute('values', `${r};${r + 11}`);
+        ringR.setAttribute('dur', '1.4s');
+        ringR.setAttribute('repeatCount', 'indefinite');
+        ring.appendChild(ringR);
+        const ringO = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
+        ringO.setAttribute('attributeName', 'stroke-opacity');
+        ringO.setAttribute('values', '0.9;0');
+        ringO.setAttribute('dur', '1.4s');
+        ringO.setAttribute('repeatCount', 'indefinite');
+        ring.appendChild(ringO);
+        g.appendChild(ring);
       }
       g.appendChild(circle);
 
