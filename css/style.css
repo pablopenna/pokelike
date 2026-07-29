@@ -513,6 +513,10 @@ h1, h2, .pixel-font {
   font-size: 9px;
   color: var(--text);
   text-align: center;
+  /* Long dex names (forms, hyphens) wrap instead of escaping the card */
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
 }
 .poke-level { font-size: 12px; color: var(--text-dim); }
 .poke-types { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
@@ -3277,21 +3281,25 @@ body.dark-mode .btn-primary:disabled { box-shadow: 3px 3px 0 0 #000; }
   }
 }
 
-/* ── Mobile catch / item screens: 3-in-a-row ──────────────────────────────── */
+/* ── Mobile catch / item screens: 3-in-a-row, 2x2 when there are 4+ ──────── */
 @media (max-width: 768px) {
   #catch-choices {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
   }
-  .poke-choice-wrap { width: auto; }
-  .poke-choice-wrap .poke-card { width: 100%; }
+  /* 4+ options (Ranger's Instinct perk): 2x2 grid — three across would
+     leave an orphan row and unreadably narrow cards */
+  #catch-choices:has(> :nth-child(4)) { grid-template-columns: repeat(2, 1fr); }
+  .poke-choice-wrap { width: auto; min-width: 0; }
+  .poke-choice-wrap .poke-card { width: 100%; padding: 12px 8px; }
 
   #item-choices {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
   }
+  #item-choices:has(> :nth-child(4)) { grid-template-columns: repeat(2, 1fr); }
   .item-card { width: auto; padding: 12px 8px; }
 }
 
