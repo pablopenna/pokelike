@@ -1235,8 +1235,14 @@ const GEN1_BST_APPROX = {
     354,356,357,359,362,367,368,369,375,
     // Gen 4
     400,407,413,416,417,421,423,433,445,464,468,475,
-    // Gen 5
-    497,500,503,531,538,539,550,556,
+    // Gen 5 (widened from the original 8: after dropping the starter lines the
+    // usable pool was just Audino/Throh/Sawk/Basculin/Maractus, so maps 6-7
+    // offered the same five species every run. Every non-starter, non-legendary
+    // Gen 5 species with BST 450-519 is eligible here.)
+    497,500,503,508,512,514,516,518,521,523,526,530,531,534,537,538,539,
+    542,545,547,549,550,553,555,556,558,560,561,563,565,569,571,573,576,
+    579,581,586,589,591,593,594,596,598,604,606,614,615,617,618,620,621,
+    623,625,626,628,630,631,632,
   ],
   high: [
     // Gen 1 (added 103/117/139/141 — need lv32-40, always met at high maps lv43+)
@@ -1249,8 +1255,11 @@ const GEN1_BST_APPROX = {
     282,295,321,330,334,344,346,348,
     // Gen 4
     389,398,402,405,409,411,414,422,431,436,442,448,460,470,
-    // Gen 5
-    497,500,503,512,514,516,534,
+    // Gen 5 (widened like midHigh — the usable pool was only the three
+    // elemental monkeys + Conkeldurr. BST 500-555 finals, Hydreigon-class
+    // pseudos stay veryHigh-only like Gen 3's.)
+    497,500,503,508,512,514,516,526,530,534,537,542,553,571,584,601,604,
+    609,612,614,615,620,628,630,637,
   ],
   veryHigh: [
     // Gen 1
@@ -1339,14 +1348,19 @@ async function getCatchChoices(mapIndex, count = 3, maxGenId = 151, excludeStart
   const runGen  = (typeof getRunGen === 'function' && typeof state !== 'undefined') ? getRunGen() : '1';
   const isGen2  = typeof state !== 'undefined' && state.gen2Mode;
   const isGen3  = runGen === '3';
-  const ranges  = isGen3 ? GEN3_MAP_BST_RANGES : isGen2 ? GEN2_MAP_BST_RANGES : MAP_BST_RANGES;
+  const isEndless = typeof state !== 'undefined' && state.isEndlessMode;
+  // Campaign BST ladder comes from GEN_RUN_CONFIG (gens 4/5 used to silently
+  // fall back to Gen 1's table); the Battle Tower keeps its legacy lookup.
+  const ranges  = (!isEndless && GEN_RUN_CONFIG[runGen]?.bstRanges)
+    ? GEN_RUN_CONFIG[runGen].bstRanges()
+    : isGen3 ? GEN3_MAP_BST_RANGES : isGen2 ? GEN2_MAP_BST_RANGES : MAP_BST_RANGES;
   const range   = ranges[Math.min(mapIndex, ranges.length - 1)];
   const pool    = await getSpeciesPool();
 
-  // Gen 2/3 widen higher tiers with the next-lower tier; the Battle Tower widens
+  // Gens 2-5 widen higher tiers with the next-lower tier; the Battle Tower widens
   // every tier (see getBstBucket) so no bucket is starved by the level curve.
-  const isEndless = typeof state !== 'undefined' && state.isEndlessMode;
-  const widenMode = isEndless ? 'endless' : ((isGen2 || isGen3) ? 'gen2' : 'none');
+  const widenMode = isEndless ? 'endless'
+    : (isGen2 || isGen3 || runGen === '4' || runGen === '5') ? 'gen2' : 'none';
   const bucket = getBstBucket(range.min, widenMode);
 
   // Exclude the FULL starter evolutionary lines (all gens): a catch node must
@@ -1734,37 +1748,37 @@ const GEN_RUN_CONFIG = {
   '1': { starters: STARTER_IDS,
          catch: { minGenId: 1, maxGenId: 151 },
          leaders: () => GYM_LEADERS, elite: () => ELITE_4,
-         levels: () => MAP_LEVEL_RANGES, badgeOffset: 0,
+         levels: () => MAP_LEVEL_RANGES, bstRanges: () => MAP_BST_RANGES, badgeOffset: 0,
          mapBg: i => `ui/mapsNormalMode/map${i + 1}.png`,
          eliteTitle: 'Elite Four & Champion' },
   '2': { starters: GEN2_STARTER_IDS,
          catch: { minGenId: 152, maxGenId: 251 },
          leaders: () => JOHTO_GYM_LEADERS, elite: () => GEN2_ELITE_4,
-         levels: () => GEN2_MAP_LEVEL_RANGES, badgeOffset: 8,
+         levels: () => GEN2_MAP_LEVEL_RANGES, bstRanges: () => GEN2_MAP_BST_RANGES, badgeOffset: 8,
          mapBg: i => `ui/mapsGen2/${i + 1}.png`,
          eliteTitle: 'Elite Four & Lance' },
   '3': { starters: GEN3_STARTER_IDS,
          catch: { minGenId: 252, maxGenId: 386 },
          leaders: () => HOENN_GYM_LEADERS, elite: () => GEN3_ELITE_4,
-         levels: () => GEN3_MAP_LEVEL_RANGES, badgeOffset: 16,
+         levels: () => GEN3_MAP_LEVEL_RANGES, bstRanges: () => GEN3_MAP_BST_RANGES, badgeOffset: 16,
          mapBg: i => `ui/mapsGen3/${i + 1}.png`,
          eliteTitle: 'Elite Four & Steven' },
   '4': { starters: GEN4_STARTER_IDS,
          catch: { minGenId: 387, maxGenId: 493 },
          leaders: () => SINNOH_GYM_LEADERS, elite: () => GEN4_ELITE_4,
-         levels: () => GEN4_MAP_LEVEL_RANGES, badgeOffset: 24,
+         levels: () => GEN4_MAP_LEVEL_RANGES, bstRanges: () => GEN4_MAP_BST_RANGES, badgeOffset: 24,
          mapBg: i => `ui/mapsGen3/${i + 1}.png`,
          eliteTitle: 'Elite Four & Cynthia' },
   '5': { starters: GEN5_STARTER_IDS,
          catch: { minGenId: 494, maxGenId: 649 },
          leaders: () => UNOVA_GYM_LEADERS, elite: () => GEN5_ELITE_4,
-         levels: () => GEN5_MAP_LEVEL_RANGES, badgeOffset: 32,
+         levels: () => GEN5_MAP_LEVEL_RANGES, bstRanges: () => GEN5_MAP_BST_RANGES, badgeOffset: 32,
          mapBg: i => `ui/mapsGen2/${i + 1}.png`,
          eliteTitle: 'Elite Four & Alder' },
   'all': { starters: [...STARTER_IDS, ...GEN2_STARTER_IDS, ...GEN3_STARTER_IDS, ...GEN4_STARTER_IDS, ...GEN5_STARTER_IDS],
          catch: { minGenId: 1, maxGenId: 649 },
          leaders: () => GYM_LEADERS, elite: () => ELITE_4,
-         levels: () => MAP_LEVEL_RANGES, badgeOffset: 0,
+         levels: () => MAP_LEVEL_RANGES, bstRanges: () => MAP_BST_RANGES, badgeOffset: 0,
          mapBg: i => `ui/mapsNormalMode/map${i + 1}.png`,
          eliteTitle: 'Elite Four & Champion' },
 };
