@@ -1387,29 +1387,62 @@ function animElementalAttack(canvas, ctx, from, to, type, isSpecial, tier = 1, a
         break;
       }
 
-      case 'stoneedge': { // STONE EDGE: razor stone pillars erupt around the foe
-        const N = 6;
-        const gy = to.y + 30;
+      case 'stoneedge': { // STONE EDGE: faceted rock shards burst up around the foe
+        ctx.globalCompositeOperation = 'source-over'; // solid rock, no additive glow
+        const N = 7;
+        const gy = to.y + 32;
         for (let k = 0; k < N; k++) {
-          const t2 = (st * 1.5 - k * 0.09); if (t2 <= 0) continue;
-          const grow = Math.min(1, t2 * 2.4);
-          const ex2 = to.x + (k - (N - 1) / 2) * 20 * E.scale + jitter(k, 4);
-          const H = (34 + (k % 3) * 16) * E.scale * grow;
-          const W3 = (7 + (k % 2) * 3) * E.scale;
-          ctx.beginPath();
-          ctx.moveTo(ex2 - W3, gy);
-          ctx.lineTo(ex2 - W3 * 0.3, gy - H * 0.75);
-          ctx.lineTo(ex2, gy - H);
-          ctx.lineTo(ex2 + W3 * 0.4, gy - H * 0.65);
-          ctx.lineTo(ex2 + W3, gy);
+          const t2 = (st * 1.5 - k * 0.07); if (t2 <= 0) continue;
+          // overshoot pop: bursts past full height then settles
+          const gr = Math.min(1, t2 * 2.6);
+          const grow = gr < 1 ? gr * (1 + 0.25 * (1 - gr)) : 1;
+          const ex2 = to.x + (k - (N - 1) / 2) * 19 * E.scale + jitter(k, 5);
+          const H = (30 + ((k * 29) % 3) * 17 + (k === 3 ? 14 : 0)) * E.scale * grow;
+          const W3 = (8 + ((k * 13) % 2) * 3) * E.scale;
+          const tilt = ((k % 2 ? 1 : -1) * (0.10 + ((k * 7) % 3) * 0.06));
+          ctx.save(); ctx.translate(ex2, gy); ctx.rotate(tilt);
+          // jagged silhouette: irregular angular shard
+          const ridge = [
+            [-W3, 0], [-W3 * 0.75, -H * 0.42], [-W3 * 0.32, -H * 0.66],
+            [-W3 * 0.12, -H], [W3 * 0.28, -H * 0.72], [W3 * 0.5, -H * 0.8],
+            [W3 * 0.78, -H * 0.34], [W3, 0],
+          ];
+          // dark base face
+          ctx.beginPath(); ridge.forEach((p2, i) => i === 0 ? ctx.moveTo(p2[0], p2[1]) : ctx.lineTo(p2[0], p2[1]));
           ctx.closePath();
-          ctx.fillStyle = `rgba(${rgb},0.95)`; ctx.fill();
-          ctx.strokeStyle = 'rgba(50,35,12,0.9)'; ctx.lineWidth = 2; ctx.stroke();
-          // glint on the fresh edge
-          ctx.strokeStyle = `rgba(255,250,230,${0.7 * grow})`; ctx.lineWidth = 1.4;
-          ctx.beginPath(); ctx.moveTo(ex2 - W3 * 0.3, gy - H * 0.72); ctx.lineTo(ex2, gy - H * 0.97); ctx.stroke();
-          // kicked-up rubble at the base
-          if (grow < 1) glowDot(ex2 + jitter(k + 2, 8), gy - 4, 3 * E.scale, rgb, '80,55,25', 0.8);
+          const gDark = ctx.createLinearGradient(0, -H, 0, 0);
+          gDark.addColorStop(0, 'rgba(150,120,75,1)'); gDark.addColorStop(1, 'rgba(72,52,26,1)');
+          ctx.fillStyle = gDark; ctx.fill();
+          ctx.strokeStyle = 'rgba(30,20,8,0.95)'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+          // lit facet (left side catches the light)
+          ctx.beginPath();
+          ctx.moveTo(-W3, 0); ctx.lineTo(-W3 * 0.75, -H * 0.42); ctx.lineTo(-W3 * 0.32, -H * 0.66);
+          ctx.lineTo(-W3 * 0.12, -H); ctx.lineTo(-W3 * 0.05, -H * 0.5); ctx.lineTo(-W3 * 0.28, 0);
+          ctx.closePath();
+          const gLit = ctx.createLinearGradient(0, -H, 0, 0);
+          gLit.addColorStop(0, 'rgba(235,215,170,0.95)'); gLit.addColorStop(1, 'rgba(165,135,85,0.9)');
+          ctx.fillStyle = gLit; ctx.fill();
+          // razor glint along the summit edge
+          ctx.strokeStyle = `rgba(255,252,235,${0.85 * grow})`; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(-W3 * 0.32, -H * 0.66); ctx.lineTo(-W3 * 0.12, -H); ctx.lineTo(W3 * 0.28, -H * 0.72); ctx.stroke();
+          // fracture crack on the dark face
+          ctx.strokeStyle = 'rgba(30,20,8,0.6)'; ctx.lineWidth = 1.2;
+          ctx.beginPath(); ctx.moveTo(W3 * 0.15, -H * 0.62); ctx.lineTo(W3 * 0.38, -H * 0.36); ctx.lineTo(W3 * 0.22, -H * 0.14); ctx.stroke();
+          ctx.restore();
+          // eruption dust + flung pebbles while rising
+          if (gr < 1) {
+            for (let d2 = 0; d2 < 3; d2++) {
+              const da = (1 - gr);
+              ctx.fillStyle = `rgba(150,120,80,${0.5 * da})`;
+              ctx.beginPath();
+              ctx.arc(ex2 + jitter(k + d2, 14), gy - 2 - d2 * 5 - gr * 10, (4 - d2) * E.scale, 0, 6.283);
+              ctx.fill();
+              ctx.fillStyle = `rgba(90,65,32,${0.8 * da})`;
+              ctx.beginPath();
+              ctx.arc(ex2 + jitter(k + d2 + 3, 18), gy - 8 - gr * 26, 1.8 * E.scale, 0, 6.283);
+              ctx.fill();
+            }
+          }
         }
         break;
       }
