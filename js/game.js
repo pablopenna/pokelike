@@ -122,22 +122,11 @@ function getRunGen() {
   return state.runGen || (state.bothGens ? 'all' : state.gen2Mode ? '2' : '1');
 }
 
-// Reset-run safety net: before a reset wipes localStorage, copy the current
-// run + endless state into "previous" slots. The IIFE below restores them on
-// the next page load, so an accidental reset can be undone by refreshing.
+// Legacy reset-backup restore: older builds had a restart button that backed
+// the run up into "previous" slots before wiping it. The button is gone, but
+// the IIFE below still recovers any such backup on load, then cleans up.
 const PREVIOUS_RUN_KEY = 'poke_previous_run';
 const PREVIOUS_ENDLESS_KEY = 'poke_previous_endless_state';
-
-function backupSavedRunForReset() {
-  try {
-    const cur = localStorage.getItem('poke_current_run');
-    if (cur) localStorage.setItem(PREVIOUS_RUN_KEY, cur);
-    else localStorage.removeItem(PREVIOUS_RUN_KEY);
-    const endless = localStorage.getItem('poke_endless_state');
-    if (endless) localStorage.setItem(PREVIOUS_ENDLESS_KEY, endless);
-    else localStorage.removeItem(PREVIOUS_ENDLESS_KEY);
-  } catch {}
-}
 
 (function restoreRunBackupOnPageLoad() {
   try {
@@ -3757,49 +3746,6 @@ async function startEndlessRun(stageNum = 1, forcedStarterId = null, forcedStart
   }
 }
 
-// Tear down any transient UI (modals, overlays, popups, tooltips) so a reset
-// triggered from a non-map screen can't leave a stale layer on top of the new
-// run. Safe to call from any screen.
-function cleanupTransientUI() {
-  const MODAL_IDS = [
-    'settings-modal', 'achievements-modal', 'pokedex-modal', 'dex-detail-modal',
-    'patch-notes-modal', 'hof-modal', 'item-equip-modal', 'tutorial-overlay',
-    'swap-trait-overlay',
-  ];
-  for (const id of MODAL_IDS) document.getElementById(id)?.remove();
-  // Persistent overlays declared in index.html — hide rather than remove.
-  for (const id of ['evo-overlay', 'eevee-choice-overlay']) {
-    const el = document.getElementById(id);
-    if (el) { el.style.display = 'none'; el.onclick = null; }
-  }
-  document.getElementById('overtime-banner')?.remove();
-  battleSpeedMultiplier = 1;
-  if (typeof _itemTooltip !== 'undefined') _itemTooltip.hide?.();
-  // A node handler interrupted by the reset never reaches its `finally`, so the
-  // click-lock would otherwise stay stuck and block the new run.
-  _nodeClickBusy = false;
-}
-
-// Restart the current run with the same starter / mode / Battle Tower stage.
-function confirmResetRun() {
-  if (!state || !state.starterSpeciesId) return;
-  cleanupTransientUI();
-  backupSavedRunForReset();
-  const starterId = state.starterSpeciesId;
-  const starterShiny = !!state.starterWasShiny;
-  const nuz = !!state.nuzlockeMode;
-  const runGen = getRunGen();
-  const retryOnWipe = state.retryOnWipe !== false;
-  const isEndless = !!state.isEndlessMode;
-  const stage = endlessState?.stageNumber ?? 1;
-  clearSavedRun();
-  if (isEndless) {
-    startEndlessRun(stage, starterId, starterShiny);
-  } else {
-    startNewRun(nuz, runGen, starterId, { retryOnWipe });
-  }
-}
-
 async function continueEndlessRun() {
   try {
     if (!loadRun()) return;
@@ -4273,15 +4219,6 @@ function advanceEndless() {
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
   const activeScreen = document.querySelector('.screen.active')?.id;
-
-  // R = restart the current run from any screen. Modifier guard keeps Ctrl+R / Cmd+R for browser reload.
-  if (e.code === 'KeyR' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
-    if (state?.starterSpeciesId) {
-      e.preventDefault();
-      confirmResetRun();
-      return;
-    }
-  }
 
   // Space = skip/cancel on any screen that has such a button
   if (e.code === 'Space' && !e.shiftKey) {
